@@ -1,0 +1,28 @@
+---
+import { Button } from "@components/ui/button";
+import {
+  SignedIn,
+  SignedOut,
+  SignInButton,
+  UserButton,
+} from "@clerk/astro/components";
+import ThemeToggle from "@components/ThemeToggle.svelte";
+---
+
+<header>
+  <nav class="flex px-4 py-2">
+    <SignedOut>
+      <SignInButton mode="modal" asChild={true}>
+        <Button>Sign In!</Button>
+      </SignInButton>
+    </SignedOut>
+
+    <SignedIn>
+      <UserButton />
+    </SignedIn>
+
+    <div class="grow"></div>
+
+    <ThemeToggle client:load />
+  </nav>
+</header>
