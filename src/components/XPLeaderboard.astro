@@ -1,0 +1,41 @@
+---
+import { GET, LEADERBOARD_SIZE } from "@pages/api/xp";
+import { clerkClient } from "@clerk/astro/server";
+import type { UserExperience } from "@lib/firebase/xp";
+import * as Popover from "@components/ui/popover";
+import XPLeaderboardUser from "./XPLeaderboardUser.svelte";
+
+const data = (await GET().then((res) => res.json())) as UserExperience[];
+
+const client = clerkClient(Astro);
+const users = await Promise.all(
+  data.map(async ({ id }) => {
+    try {
+      return await client.users.getUser(id);
+    } catch (e) {
+      console.error(e);
+      return null;
+    }
+  }),
+);
+---
+
+<div>
+  <h2 class="mb-2 text-2xl font-bold">Leaderboard</h2>
+  <p class="mb-4 text-sm text-muted-foreground">Top {LEADERBOARD_SIZE} users</p>
+
+  <div class="flex flex-col gap-2">
+    {
+      data.map((user, i) => (
+        <div>
+          <XPLeaderboardUser
+            user={user}
+            username={users[i]?.username ?? null}
+            rank={i + 1}
+            client:idle
+          />
+        </div>
+      ))
+    }
+  </div>
+</div>

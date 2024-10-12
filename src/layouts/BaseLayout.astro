@@ -39,7 +39,11 @@ import "$lib/styles/app.css";
   <body>
     <Header />
 
-    <slot />
+    <div class="mx-auto max-w-screen-md">
+      <main class="container mx-auto">
+        <slot />
+      </main>
+    </div>
 
     <ModeWatcher client:load />
   </body>
