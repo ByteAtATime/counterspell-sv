@@ -1,8 +1,15 @@
 ---
-import BaseLayout from "$lib/layouts/BaseLayout.astro";
-import XPLeaderboard from "$lib/components/XPLeaderboard.astro";
+import BaseLayout from "@layouts/BaseLayout.astro";
+import XPLeaderboard from "@components/XPLeaderboard.svelte";
+import AddXPModal from "@components/AddXPModal.svelte";
+
+const currentUser = await Astro.locals.currentUser();
 ---
 
 <BaseLayout>
-  <XPLeaderboard />
+  <AddXPModal mockUser={currentUser} client:idle />
+
+  <div class="h-4"></div>
+
+  <XPLeaderboard client:idle />
 </BaseLayout>

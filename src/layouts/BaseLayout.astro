@@ -1,6 +1,7 @@
 ---
 import { ModeWatcher } from "mode-watcher";
 import Header from "@components/Header.astro";
+import { Toaster } from "@components/ui/sonner";
 import "$lib/styles/app.css";
 ---
 
@@ -38,6 +39,7 @@ import "$lib/styles/app.css";
   </head>
   <body>
     <Header />
+    <Toaster client:idle />
 
     <div class="mx-auto max-w-screen-md">
       <main class="container mx-auto">

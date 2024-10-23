@@ -31,12 +31,6 @@ importers:
       firebase-admin:
         specifier: ^12.6.0
         version: 12.6.0
-      lucide-svelte:
-        specifier: ^0.452.0
-        version: 0.452.0(svelte@4.2.19)
-      mode-watcher:
-        specifier: ^0.4.1
-        version: 0.4.1(svelte@4.2.19)
       svelte:
         specifier: ^4.2.19
         version: 4.2.19
@@ -56,6 +50,15 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      cmdk-sv:
+        specifier: ^0.0.18
+        version: 0.0.18(svelte@4.2.19)
+      lucide-svelte:
+        specifier: ^0.452.0
+        version: 0.452.0(svelte@4.2.19)
+      mode-watcher:
+        specifier: ^0.4.1
+        version: 0.4.1(svelte@4.2.19)
       prettier:
         specifier: ^3.3.3
         version: 3.3.3
@@ -68,6 +71,9 @@ importers:
       prettier-plugin-tailwindcss:
         specifier: ^0.6.8
         version: 0.6.8(prettier-plugin-astro@0.14.1)(prettier-plugin-svelte@3.2.7(prettier@3.3.3)(svelte@4.2.19))(prettier@3.3.3)
+      svelte-sonner:
+        specifier: ^0.3.28
+        version: 0.3.28(svelte@4.2.19)
       tailwind-merge:
         specifier: ^2.5.3
         version: 2.5.3
@@ -2243,6 +2249,14 @@ packages:
         integrity: sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA==,
       }
     engines: { node: ">=6" }
+
+  cmdk-sv@0.0.18:
+    resolution:
+      {
+        integrity: sha512-istixiQSy9Ez/mQ4VXWB69btqNyDZckbd1XFEwR46Vw+n5zjdmvoWAcOTj0uX3FZXtw9ikwLVmfoW2nwwMClRg==,
+      }
+    peerDependencies:
+      svelte: ^4.0.0 || ^5.0.0-next.1
 
   code-red@1.0.4:
     resolution:
@@ -4902,6 +4916,14 @@ packages:
     peerDependencies:
       svelte: ^3.19.0 || ^4.0.0
 
+  svelte-sonner@0.3.28:
+    resolution:
+      {
+        integrity: sha512-K3AmlySeFifF/cKgsYNv5uXqMVNln0NBAacOYgmkQStLa/UoU0LhfAACU6Gr+YYC8bOCHdVmFNoKuDbMEsppJg==,
+      }
+    peerDependencies:
+      svelte: ^3.0.0 || ^4.0.0 || ^5.0.0-next.1
+
   svelte2tsx@0.7.22:
     resolution:
       {
@@ -7234,6 +7256,12 @@ snapshots:
 
   clsx@2.1.1: {}
 
+  cmdk-sv@0.0.18(svelte@4.2.19):
+    dependencies:
+      bits-ui: 0.21.16(svelte@4.2.19)
+      nanoid: 5.0.7
+      svelte: 4.2.19
+
   code-red@1.0.4:
     dependencies:
       "@jridgewell/sourcemap-codec": 1.5.0
@@ -9032,6 +9060,10 @@ snapshots:
   supports-preserve-symlinks-flag@1.0.0: {}
 
   svelte-hmr@0.16.0(svelte@4.2.19):
+    dependencies:
+      svelte: 4.2.19
+
+  svelte-sonner@0.3.28(svelte@4.2.19):
     dependencies:
       svelte: 4.2.19
 
