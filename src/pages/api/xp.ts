@@ -1,4 +1,4 @@
-import { getAllUsersExperience } from "$lib/lib/firebase/xp";
+import { getAllUsersExperience } from "@lib/firebase/xp";
 import type { APIRoute } from "astro";
 
 export const LEADERBOARD_SIZE = 2;
