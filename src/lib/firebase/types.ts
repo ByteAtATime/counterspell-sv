@@ -13,3 +13,15 @@ export const userExperienceSchema = z.object({
   ),
 });
 export type UserExperience = z.infer<typeof userExperienceSchema>;
+
+export const userMetadataSchema = z.object({
+  eventsAttended: z.array(z.string()).default([]),
+  isAdmin: z.boolean().default(false),
+})
+export type UserMetadata = z.infer<typeof userMetadataSchema>;
+
+export const eventSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+})
+export type Event = z.infer<typeof eventSchema>;

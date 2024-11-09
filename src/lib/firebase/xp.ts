@@ -1,11 +1,10 @@
-import { app } from "./server";
+import { app, firestore } from "./server";
 import { getFirestore } from "firebase-admin/firestore";
 import {
   type UserExperience,
   userExperienceSchema,
 } from "@lib/firebase/types.ts";
 
-const firestore = getFirestore(app);
 const experienceCollection = firestore.collection("experience");
 
 export const getAllUsersExperience = async (): Promise<UserExperience[]> => {
