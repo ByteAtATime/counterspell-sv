@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { clerkClient } from "@clerk/astro/server";
+import { displayUser } from "@lib/users/utils.ts";
 
 export const GET: APIRoute = async (context) => {
   const user = await context.locals.currentUser();
@@ -17,5 +18,15 @@ export const GET: APIRoute = async (context) => {
   const client = clerkClient(context);
   const users = await client.users.getUserList({ limit: 500 });
 
-  return new Response(JSON.stringify(users), { status: 200 });
+  const processedData = users.data.map(user => ({
+    id: user.id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    primaryEmail: user.emailAddresses && user.emailAddresses.length > 0 ? user.emailAddresses[0].emailAddress : null,
+    displayName: displayUser(user),
+    imageUrl: user.imageUrl,
+  }));
+
+
+  return new Response(JSON.stringify(processedData), { status: 200 });
 }
