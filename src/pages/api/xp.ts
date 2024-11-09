@@ -1,7 +1,7 @@
 import { getAllUsersExperience } from "@lib/firebase/xp";
 import type { APIRoute } from "astro";
 
-export const LEADERBOARD_SIZE = 2;
+export const LEADERBOARD_SIZE = 10;
 
 /** Gets the experience of the top LEADERBOARD_SIZE users */
 export const GET: APIRoute = async (context) => {
