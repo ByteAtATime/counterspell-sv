@@ -7,7 +7,7 @@ const currentUser = await Astro.locals.currentUser();
 ---
 
 <BaseLayout>
-  <AddXPModal mockUser={currentUser} client:idle />
+  {currentUser && <AddXPModal mockUser={currentUser} client:idle />}
 
   <div class="h-4"></div>
 
