@@ -21,7 +21,7 @@
     const experienceCollection = query(
       collection(firestore, "experience"),
       orderBy("xp", "desc"),
-      limit(2),
+      limit(10),
     );
 
     onSnapshot(experienceCollection, (querySnapshot) => {
