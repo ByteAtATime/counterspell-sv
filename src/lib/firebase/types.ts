@@ -33,6 +33,7 @@ export const prizeSchema = z.object({
   cost: z.number(),
   stock: z.number(),
   imageUrl: z.string(),
+  description: z.string(),
 })
 
 export type Prize = z.infer<typeof prizeSchema>;

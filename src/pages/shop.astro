@@ -8,16 +8,21 @@ const prizes = await getAllPrizes();
 
 <BaseLayout>
   <h1 class="font-bold text-4xl mb-4">Shop</h1>
-  <div class="grid md:grid-cols-2">
+  <div class="grid grid-cols-2 gap-4">
     {prizes.map((prize) => (
       <Card.Root>
-        <Card.Header>
-          <img src={prize.imageUrl} alt={prize.name} class="max-h-40 max-w-40 object-contain mx-auto mb-4" />
-          <Card.Title>{prize.name}</Card.Title>
-          <Card.Description>{prize.stock} left in stock</Card.Description>
-        </Card.Header>
-        <Card.Content>
-          <p>Costs {prize.cost} XP</p>
+        <Card.Content class="flex items-center justify-between gap-4">
+          <div>
+            <div class="flex flex-col space-y-1.5 mb-4">
+              <Card.Title>{prize.name}</Card.Title>
+              <Card.Description>{prize.description}</Card.Description>
+            </div>
+
+            <p>Costs {prize.cost} XP</p>
+            <p class="text-muted-foreground text-sm"><span class="text-foreground">{prize.stock}</span> left in stock</p>
+          </div>
+
+          <img src={prize.imageUrl} alt={prize.name} class="max-h-20 max-w-20 object-contain" />
         </Card.Content>
       </Card.Root>
     ))}
