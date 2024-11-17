@@ -38,7 +38,7 @@
       {#each experience.history as entry}
         <div class="flex items-center gap-1">
           <span class="text-sm text-muted-foreground">{entry.reason}</span>
-          <span class="ml-auto">+{entry.xp}</span>
+          <span class="ml-auto">{entry.xp > 0 ? "+" : ""}{entry.xp}</span>
         </div>
       {/each}
     </div>
