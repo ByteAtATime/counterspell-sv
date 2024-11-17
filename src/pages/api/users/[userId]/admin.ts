@@ -1,9 +1,10 @@
 import type { APIRoute } from "astro";
 import { getUserExperience } from "@lib/firebase/xp.ts";
 import { displayUser } from "@lib/users/utils.ts";
+import { clerkClient } from "@clerk/astro/server";
 
-export const GET: APIRoute = async ({ params, locals }) => {
-  const user = await locals.currentUser();
+export const GET: APIRoute = async (context) => {
+  const user = await context.locals.currentUser();
 
   const isAdmin = user?.publicMetadata.isAdmin;
 
@@ -13,7 +14,7 @@ export const GET: APIRoute = async ({ params, locals }) => {
     });
   }
 
-  const { userId } = params;
+  const { userId } = context.params;
 
   if (!userId) {
     return new Response(
@@ -22,9 +23,12 @@ export const GET: APIRoute = async ({ params, locals }) => {
     );
   }
 
+  const client = clerkClient(context)
+  const requestUser = await client.users.getUser(userId)
+
   const userData = {
     xp: await getUserExperience(userId),
-    displayName: displayUser(user),
+    displayName: displayUser(requestUser),
   };
 
   return new Response(JSON.stringify(userData), { status: 200 });
