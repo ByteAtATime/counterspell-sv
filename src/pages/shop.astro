@@ -12,6 +12,7 @@ const prizes = await getAllPrizes();
     {prizes.map((prize) => (
       <Card.Root>
         <Card.Header>
+          <img src={prize.imageUrl} alt={prize.name} class="max-h-40 max-w-40 object-contain mx-auto" />
           <Card.Title>{prize.name}</Card.Title>
           <Card.Description>{prize.stock} left in stock</Card.Description>
         </Card.Header>
