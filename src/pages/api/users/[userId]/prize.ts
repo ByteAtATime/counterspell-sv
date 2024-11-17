@@ -29,7 +29,13 @@ export const POST: APIRoute = async (context) => {
     return new Response("User not found", { status: 404 });
   }
 
-  await buyPrize(prizeId, userId);
+  try {
+    await buyPrize(prizeId, userId);
+  } catch (error: any) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+    });
+  }
 
   const metadata = userMetadataSchema.parse(user.publicMetadata);
   await client.users.updateUserMetadata(userId, {
