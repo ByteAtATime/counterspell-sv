@@ -1,0 +1,24 @@
+---
+import { getAllPrizes } from "@lib/firebase/prizes";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import * as Card from "@components/ui/card"
+
+const prizes = await getAllPrizes();
+---
+
+<BaseLayout>
+  <h1 class="font-bold text-4xl mb-4">Shop</h1>
+  <div class="grid md:grid-cols-2">
+    {prizes.map((prize) => (
+      <Card.Root>
+        <Card.Header>
+          <Card.Title>{prize.name}</Card.Title>
+          <Card.Description>{prize.stock} left in stock</Card.Description>
+        </Card.Header>
+        <Card.Content>
+          <p>Costs {prize.cost} XP</p>
+        </Card.Content>
+      </Card.Root>
+    ))}
+  </div>
+</BaseLayout>

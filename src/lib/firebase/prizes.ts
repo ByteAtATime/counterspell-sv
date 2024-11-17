@@ -1,10 +1,11 @@
 import { firestore } from "@lib/firebase/server.ts";
+import { prizeSchema } from "@lib/firebase/types.ts";
 
 const prizesCollection = firestore.collection('prizes');
 
 export const getAllPrizes = async () => {
   const snapshot = await prizesCollection.get();
-  return snapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id }));
+  return snapshot.docs.map((doc) => prizeSchema.parse({ ...doc.data(), id: doc.id }));
 }
 
 export const buyPrize = async (prizeId: string, userId: string) => {
