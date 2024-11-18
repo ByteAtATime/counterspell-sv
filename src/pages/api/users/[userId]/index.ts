@@ -28,7 +28,7 @@ export const GET: APIRoute = async (context) => {
       return acc;
     }, {});
 
-    const prizeIds: string[] = user.publicMetadata.prizesRedeemed;
+    const prizeIds: string[] = user.publicMetadata.prizesRedeemed as string[];
 
     const prizes = await Promise.resolve(GET_prizes(context)).then((res) => res.json());
 
