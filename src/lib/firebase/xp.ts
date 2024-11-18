@@ -14,8 +14,9 @@ export const getAllUsersExperience = async (): Promise<UserExperience[]> => {
   );
 };
 
-export const getUserExperience = async (userId: string): Promise<UserExperience> => {
+export const getUserExperience = async (userId: string): Promise<UserExperience|null> => {
   const doc = await experienceCollection.doc(userId).get();
+  if (!doc.exists) return null;
   return userExperienceSchema.parse({ ...doc.data(), id: doc.id });
 }
 
