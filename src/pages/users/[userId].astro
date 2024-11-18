@@ -13,13 +13,9 @@ if (!user || (user.id !== Astro.params.userId && !user.publicMetadata.isAdmin)) 
 let userPrizes: (Prize & { count: number })[] = [];
 let userData: { displayName: string, avatar: string, xp: UserExperience, prizes: string[] }|null = null;
 
-console.log("debug1")
-
 try {
   userData = await Promise.resolve(GET_userData(Astro)).then((res) => res.json());
-  console.log("debug2")
   const prizes = await Promise.resolve(GET_prizes(Astro)).then((res) => res.json());
-  console.log("debug3")
 
   userPrizes = userData?.prizes.reduce((acc: any[], prizeId: string) => {
     const prize = prizes.find((p: { id: string }) => p.id === prizeId);
@@ -33,7 +29,6 @@ try {
 
     return acc;
   }, []) ?? [];
-  console.log("debug4")
 } catch (error) {
   console.error(error)
   return new Response("An error occurred while fetching user data. Does this user exist?", { status: 500 });
@@ -42,8 +37,6 @@ try {
 if (!userData) {
   return new Response("User not found", { status: 404 });
 }
-
-console.log("debug5")
 ---
 
 <BaseLayout>
