@@ -16,9 +16,9 @@ let userData: { displayName: string, avatar: string, xp: UserExperience, prizes:
 console.log("debug1")
 
 try {
-  userData = await GET_userData(Astro).then((res) => res.json());
+  userData = await Promise.resolve(GET_userData(Astro)).then((res) => res.json());
   console.log("debug2")
-  const prizes = await GET_prizes(Astro).then((res) => res.json());
+  const prizes = await Promise.resolve(GET_prizes(Astro)).then((res) => res.json());
   console.log("debug3")
 
   userPrizes = userData?.prizes.reduce((acc: any[], prizeId: string) => {
