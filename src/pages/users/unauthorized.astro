@@ -1,0 +1,21 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import { ArrowLeft, Lock } from "lucide-svelte";
+---
+
+<BaseLayout>
+  <div class="flex flex-col items-center justify-center text-center">
+    <div class="rounded-full bg-blue-100/10 p-4 dark:bg-blue-900/20">
+      <Lock class="h-8 w-8 text-blue-500 dark:text-blue-400" />
+    </div>
+
+    <div class="space-y-2">
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
+        Private Profile
+      </h1>
+      <p class="max-w-sm text-gray-600 dark:text-gray-300">
+        You can only view your own profile.
+      </p>
+    </div>
+  </div>
+</BaseLayout>

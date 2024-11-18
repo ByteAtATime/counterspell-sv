@@ -1,29 +1,41 @@
 ---
 import BaseLayout from "@layouts/BaseLayout.astro";
 import { Plus, Minus, ShoppingBag } from "lucide-svelte";
+import type { Prize, UserExperience } from "@lib/firebase/types";
 
 const user = await Astro.locals.currentUser();
 if (!user || (user.id !== Astro.params.userId && !user.publicMetadata.isAdmin)) {
   Astro.redirect('/users/unauthorized');
 }
 
-const userUrl = new URL(`/api/users/${Astro.params.userId}`, Astro.url.origin);
-const prizesUrl = new URL(`/api/prizes`, Astro.url.origin);
-const userData = await fetch(userUrl).then((res) => res.json());
-const prizes = await fetch(prizesUrl).then((res) => res.json());
+let userPrizes: (Prize & { count: number })[] = [];
+let userData: { displayName: string, avatar: string, xp: UserExperience, prizes: string[] }|null = null;
 
-const userPrizes = userData.prizes.reduce((acc: any[], prizeId: string) => {
-  const prize = prizes.find((p: { id: string }) => p.id === prizeId);
-  const existingPrize = acc.find((p) => p.id === prizeId);
+try {
+  const userUrl = new URL(`/api/users/${Astro.params.userId}`, Astro.url.origin);
+  const prizesUrl = new URL(`/api/prizes`, Astro.url.origin);
+  userData = await fetch(userUrl).then((res) => res.json());
+  const prizes = await fetch(prizesUrl).then((res) => res.json());
 
-  if (existingPrize) {
-    existingPrize.count++;
-  } else if (prize) {
-    acc.push({ ...prize, count: 1 });
-  }
+  userPrizes = userData?.prizes.reduce((acc: any[], prizeId: string) => {
+    const prize = prizes.find((p: { id: string }) => p.id === prizeId);
+    const existingPrize = acc.find((p) => p.id === prizeId);
 
-  return acc;
-}, []);
+    if (existingPrize) {
+      existingPrize.count++;
+    } else if (prize) {
+      acc.push({ ...prize, count: 1 });
+    }
+
+    return acc;
+  }, []) ?? [];
+} catch (error) {
+  return new Response("An error occurred while fetching user data. Does this user exist?", { status: 500 });
+}
+
+if (!userData) {
+  return new Response("User not found", { status: 404 });
+}
 ---
 
 <BaseLayout>
