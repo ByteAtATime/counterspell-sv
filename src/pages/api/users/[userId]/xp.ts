@@ -1,5 +1,6 @@
 import { grantUserExperience } from "@lib/firebase/xp";
 import type { APIRoute } from "astro";
+import { displayUser } from "@lib/users/utils.ts";
 
 export const POST: APIRoute = async ({ params, request, locals }) => {
   const user = await locals.currentUser();
@@ -22,7 +23,7 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
     );
   }
 
-  await grantUserExperience(userId, amount, reason);
+  await grantUserExperience(userId, displayUser(user), amount, reason);
 
   return new Response(JSON.stringify({ success: true }), { status: 200 });
 };

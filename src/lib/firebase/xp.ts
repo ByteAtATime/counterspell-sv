@@ -22,6 +22,7 @@ export const getUserExperience = async (userId: string): Promise<UserExperience|
 
 export const grantUserExperience = async (
   userId: string,
+  author: string,
   amount: number,
   reason: string,
 ) => {
@@ -33,11 +34,13 @@ export const grantUserExperience = async (
       xp: number;
       timestamp: Date;
       reason: string;
+      author: string;
     }[];
     history.push({
       xp: amount,
       timestamp: new Date(),
       reason,
+      author,
     });
     await userDoc.set({ xp: userDocData.xp + amount, history });
   } else {
@@ -46,6 +49,7 @@ export const grantUserExperience = async (
         xp: amount,
         timestamp: new Date(),
         reason,
+        author,
       },
     ];
     await userDoc.set({ xp: amount, history });
