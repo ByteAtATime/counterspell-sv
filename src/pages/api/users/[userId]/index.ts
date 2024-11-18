@@ -4,6 +4,7 @@ import { displayUser } from "@lib/users/utils";
 import { getUserExperience } from "@lib/firebase/xp.ts";
 import { getAllEvents } from "@lib/firebase/events.ts";
 import { userMetadataSchema } from "@lib/firebase/types.ts";
+import { GET as GET_prizes } from "../../prizes.ts";
 
 // sending public data
 export const GET: APIRoute = async (context) => {
@@ -27,11 +28,15 @@ export const GET: APIRoute = async (context) => {
       return acc;
     }, {});
 
+    const prizeIds: string[] = user.publicMetadata.prizesRedeemed;
+
+    const prizes = await Promise.resolve(GET_prizes(context)).then((res) => res.json());
+
     const response = {
       displayName: displayUser(user, false),
       avatar: user.imageUrl,
       xp: await getUserExperience(userId),
-      prizes: user.publicMetadata.prizesRedeemed,
+      prizes: prizeIds.map((prizeId) => prizes.find((prize: {id: string}) => prize.id === prizeId)),
       attendedEvents
     }
 
