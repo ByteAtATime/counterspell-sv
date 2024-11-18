@@ -30,11 +30,11 @@ try {
     return acc;
   }, []) ?? [];
 } catch (error) {
-  return new Response("An error occurred while fetching user data. Does this user exist?", { status: 500 });
+  Astro.redirect('/users/unauthorized');
 }
 
 if (!userData) {
-  return new Response("User not found", { status: 404 });
+  Astro.redirect('/users/unauthorized');
 }
 ---
 
