@@ -1,0 +1,2450 @@
+========= [./middleware.ts] ===========
+```
+import { clerkMiddleware } from "@clerk/astro/server";
+
+export const onRequest = clerkMiddleware();
+```
+
+========= [./pages/shop.astro] ===========
+```
+---
+import { getAllPrizes } from "@lib/firebase/prizes";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import * as Card from "@components/ui/card"
+
+const prizes = await getAllPrizes();
+---
+
+<BaseLayout>
+  <h1 class="font-bold text-4xl mb-4">Shop</h1>
+  <div class="grid grid-cols-2 gap-4">
+    {prizes.map((prize) => (
+      <Card.Root>
+        <Card.Content class="flex items-center justify-between gap-4">
+          <div>
+            <div class="flex flex-col space-y-1.5 mb-4">
+              <Card.Title>{prize.name}</Card.Title>
+              <Card.Description>{prize.description}</Card.Description>
+            </div>
+
+            <p>Costs {prize.cost} XP</p>
+            <p class="text-muted-foreground text-sm"><span class="text-foreground">{prize.stock}</span> left in stock</p>
+          </div>
+
+          <img src={prize.imageUrl} alt={prize.name} class="max-h-20 max-w-20 object-contain" />
+        </Card.Content>
+      </Card.Root>
+    ))}
+  </div>
+</BaseLayout>
+```
+
+========= [./pages/api/events.ts] ===========
+```
+import type { APIRoute } from "astro";
+import { getAllEvents } from "@lib/firebase/events.ts";
+
+export const GET: APIRoute = async (context) => {
+  const user = await context.locals.currentUser();
+
+  const isAdmin = user?.publicMetadata.isAdmin;
+
+  if (!isAdmin) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+    });
+  }
+
+  const events = await getAllEvents()
+
+  return new Response(JSON.stringify(events), {
+    headers: {
+      "content-type": "application/json",
+    },
+  });
+}
+```
+
+========= [./pages/api/prizes.ts] ===========
+```
+import type { APIRoute } from "astro";
+import { getAllPrizes } from "@lib/firebase/prizes.ts";
+
+export const GET: APIRoute = async (context) => {
+  const prizes = await getAllPrizes();
+
+  return new Response(JSON.stringify(prizes), {
+    headers: {
+      "content-type": "application/json",
+    },
+  });
+}
+```
+
+========= [./pages/api/xp.ts] ===========
+```
+import { getAllUsersExperience } from "@lib/firebase/xp";
+import type { APIRoute } from "astro";
+
+export const LEADERBOARD_SIZE = 10;
+
+/** Gets the experience of the top LEADERBOARD_SIZE users */
+export const GET: APIRoute = async (context) => {
+  const user = await context.locals.currentUser();
+
+  const isAdmin = user?.publicMetadata.isAdmin;
+
+  const experiences = await getAllUsersExperience();
+  const sortedExperiences = experiences.sort((a, b) => b.xp - a.xp);
+  const topExperiences = isAdmin
+    ? sortedExperiences
+    : sortedExperiences.slice(0, LEADERBOARD_SIZE);
+  return new Response(JSON.stringify(topExperiences), { status: 200 });
+};
+```
+
+========= [./pages/api/users/[userId]/events.ts] ===========
+```
+import type { APIRoute } from "astro";
+import { clerkClient } from "@clerk/astro/server";
+import { getAllEvents } from "@lib/firebase/events.ts";
+import { userMetadataSchema } from "@lib/firebase/types.ts";
+
+export const GET: APIRoute = async (context) => {
+  const { userId } = context.params;
+
+  if (!userId) {
+    return new Response("Missing required params", { status: 400 });
+  }
+
+  const client = clerkClient(context);
+  const user = await client.users.getUser(userId);
+
+  if (!user) {
+    return new Response("User not found", { status: 404 });
+  }
+
+  const allEvents = await getAllEvents();
+  const eventsAttended = userMetadataSchema.parse(user.publicMetadata).eventsAttended;
+
+  // return as eventId: boolean
+  const attendedEvents = allEvents.reduce<Record<string, boolean>>((acc, event) => {
+    acc[event.id] = eventsAttended.includes(event.id);
+    return acc;
+  }, {});
+
+  return new Response(JSON.stringify(attendedEvents), {
+    headers: {
+      "content-type": "application/json",
+    },
+  });
+}```
+
+========= [./pages/api/users/[userId]/prize.ts] ===========
+```
+import type { APIRoute } from "astro";
+import { clerkClient } from "@clerk/astro/server";
+import { userMetadataSchema } from "@lib/firebase/types.ts";
+import { buyPrize } from "@lib/firebase/prizes.ts";
+
+export const POST: APIRoute = async (context) => {
+  const sender = await context.locals.currentUser();
+
+  const isAdmin = sender?.publicMetadata.isAdmin;
+
+  if (!isAdmin) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+    });
+  }
+
+  const { userId } = context.params;
+
+  const prizeId = context.url.searchParams.get("prizeId");
+
+  if (!prizeId || !userId) {
+    return new Response("Missing required params", { status: 400 });
+  }
+
+  const client = clerkClient(context);
+  const user = await client.users.getUser(userId);
+
+  if (!user) {
+    return new Response("User not found", { status: 404 });
+  }
+
+  try {
+    await buyPrize(prizeId, userId);
+  } catch (error: any) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+    });
+  }
+
+  const metadata = userMetadataSchema.parse(user.publicMetadata);
+  await client.users.updateUserMetadata(userId, {
+    publicMetadata: {
+      ...metadata,
+      prizesRedeemed: [...metadata.prizesRedeemed, prizeId],
+    },
+  });
+
+  return new Response(JSON.stringify({ success: true }), {
+    headers: {
+      "content-type": "application/json",
+    },
+  });
+}```
+
+========= [./pages/api/users/[userId]/event.ts] ===========
+```
+import type { APIRoute } from "astro";
+import { clerkClient } from "@clerk/astro/server";
+import { userMetadataSchema } from "@lib/firebase/types.ts";
+
+export const GET: APIRoute = async (context) => {
+  const { userId } = context.params;
+
+  const eventId = context.url.searchParams.get("eventId");
+
+  if (!eventId || !userId) {
+    return new Response("Missing required params", { status: 400 });
+  }
+
+  const client = clerkClient(context);
+  const user = await client.users.getUser(userId);
+
+  if (!user) {
+    return new Response("User not found", { status: 404 });
+  }
+
+  const hasAttended = userMetadataSchema.parse(user.publicMetadata).eventsAttended.includes(eventId);
+
+  return new Response(JSON.stringify({ hasAttended }), {
+    headers: {
+      "content-type": "application/json",
+    },
+  });
+}
+
+export const POST: APIRoute = async (context) => {
+  const sender = await context.locals.currentUser();
+
+  const isAdmin = sender?.publicMetadata.isAdmin;
+
+  if (!isAdmin) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+    });
+  }
+
+  const { userId } = context.params;
+
+  const eventId = context.url.searchParams.get("eventId");
+
+  if (!eventId || !userId) {
+    return new Response("Missing required params", { status: 400 });
+  }
+
+  const client = clerkClient(context);
+  const user = await client.users.getUser(userId);
+
+  if (!user) {
+    return new Response("User not found", { status: 404 });
+  }
+
+  const metadata = userMetadataSchema.parse(user.publicMetadata);
+  await client.users.updateUserMetadata(userId, {
+    publicMetadata: {
+      ...metadata,
+      eventsAttended: [...metadata.eventsAttended, eventId],
+    }
+  })
+
+  return new Response(JSON.stringify({ success: true }), { status: 200 });
+}
+```
+
+========= [./pages/api/users/[userId]/admin.ts] ===========
+```
+import type { APIRoute } from "astro";
+import { getUserExperience } from "@lib/firebase/xp.ts";
+import { displayUser } from "@lib/users/utils.ts";
+import { clerkClient } from "@clerk/astro/server";
+
+export const GET: APIRoute = async (context) => {
+  const user = await context.locals.currentUser();
+
+  const isAdmin = user?.publicMetadata.isAdmin;
+
+  if (!isAdmin) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+    });
+  }
+
+  const { userId } = context.params;
+
+  if (!userId) {
+    return new Response(
+      JSON.stringify({ error: "Missing required parameters" }),
+      { status: 400 },
+    );
+  }
+
+  const client = clerkClient(context)
+  const requestUser = await client.users.getUser(userId)
+
+  const userData = {
+    xp: await getUserExperience(userId),
+    displayName: displayUser(requestUser),
+  };
+
+  return new Response(JSON.stringify(userData), { status: 200 });
+}
+```
+
+========= [./pages/api/users/[userId]/index.ts] ===========
+```
+import type { APIRoute } from "astro";
+import { clerkClient } from "@clerk/astro/server";
+import { displayUser } from "@lib/users/utils";
+import { getUserExperience } from "@lib/firebase/xp.ts";
+
+// sending public data
+export const GET: APIRoute = async (context) => {
+  const { userId } = context.params;
+
+  if (!userId) {
+    return new Response("User ID is required", { status: 400 });
+  }
+
+  const client = clerkClient(context);
+  const user = await client.users.getUser(userId).catch(() => null);
+
+  if (!user) return new Response("User not found", { status: 404 });
+
+  if (user.publicMetadata.isAdmin || userId === user.id) {
+    const response = {
+      displayName: displayUser(user, false),
+      avatar: user.imageUrl,
+      xp: await getUserExperience(userId),
+      prizes: user.publicMetadata.prizesRedeemed,
+    }
+
+    return new Response(JSON.stringify(response), { status: 200 });
+  }
+
+  const response = {
+    displayName: displayUser(user),
+  };
+
+  return new Response(JSON.stringify(response), { status: 200 });
+};
+```
+
+========= [./pages/api/users/[userId]/xp.ts] ===========
+```
+import { grantUserExperience } from "@lib/firebase/xp";
+import type { APIRoute } from "astro";
+
+export const POST: APIRoute = async ({ params, request, locals }) => {
+  const user = await locals.currentUser();
+
+  const isAdmin = user?.publicMetadata.isAdmin;
+
+  if (!isAdmin) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+    });
+  }
+
+  const { userId } = params;
+  const { amount, reason } = await request.json();
+
+  if (!userId || !amount || !reason) {
+    return new Response(
+      JSON.stringify({ error: "Missing required parameters" }),
+      { status: 400 },
+    );
+  }
+
+  await grantUserExperience(userId, amount, reason);
+
+  return new Response(JSON.stringify({ success: true }), { status: 200 });
+};
+```
+
+========= [./pages/api/users/index.ts] ===========
+```
+import type { APIRoute } from "astro";
+import { clerkClient } from "@clerk/astro/server";
+import { displayUser } from "@lib/users/utils.ts";
+
+export const GET: APIRoute = async (context) => {
+  const user = await context.locals.currentUser();
+
+  const isAdmin = user?.publicMetadata.isAdmin;
+
+  if (!isAdmin) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+    });
+  }
+
+  // Fetch all users
+
+  const client = clerkClient(context);
+  const users = await client.users.getUserList({ limit: 500 });
+
+  const processedData = users.data.map(user => ({
+    id: user.id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    primaryEmail: user.emailAddresses && user.emailAddresses.length > 0 ? user.emailAddresses[0].emailAddress : null,
+    displayName: displayUser(user),
+    imageUrl: user.imageUrl,
+  }));
+
+
+  return new Response(JSON.stringify(processedData), { status: 200 });
+}
+```
+
+========= [./pages/users/[userId].astro] ===========
+```
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import { Plus, Minus, ShoppingBag } from "lucide-svelte";
+import type { Prize, UserExperience } from "@lib/firebase/types";
+import { GET as GET_userData } from "../api/users/[userId]";
+import { GET as GET_prizes } from "../api/prizes";
+
+const user = await Astro.locals.currentUser();
+if (!user || (user.id !== Astro.params.userId && !user.publicMetadata.isAdmin)) {
+  Astro.redirect('/users/unauthorized');
+}
+
+let userPrizes: (Prize & { count: number })[] = [];
+let userData: { displayName: string, avatar: string, xp: UserExperience, prizes: string[] }|null = null;
+
+try {
+  userData = await Promise.resolve(GET_userData(Astro)).then((res) => res.json());
+  const prizes = await Promise.resolve(GET_prizes(Astro)).then((res) => res.json());
+
+  userPrizes = userData?.prizes.reduce((acc: any[], prizeId: string) => {
+    const prize = prizes.find((p: { id: string }) => p.id === prizeId);
+    const existingPrize = acc.find((p) => p.id === prizeId);
+
+    if (existingPrize) {
+      existingPrize.count++;
+    } else if (prize) {
+      acc.push({ ...prize, count: 1 });
+    }
+
+    return acc;
+  }, []) ?? [];
+} catch (error) {
+  console.error(error)
+  return new Response("An error occurred while fetching user data. Does this user exist?", { status: 500 });
+}
+
+if (!userData) {
+  return new Response("User not found", { status: 404 });
+}
+---
+
+<BaseLayout>
+  <div class="flex flex-col text-center md:flex-row md:text-left items-center gap-4">
+    <img src={userData.avatar} alt={userData.displayName} class="rounded-full w-24 h-24" />
+
+    <div>
+      <h1 class="font-bold text-3xl">{userData.displayName}</h1>
+      <p class="text-muted-foreground">{userData.xp ? `XP: ${userData.xp.xp}` : "XP: 0 (start earning some!)"}</p>
+    </div>
+  </div>
+
+  <h2 class="text-2xl font-bold mt-8">Prizes</h2>
+
+  <ul class="list-disc list-inside">
+    {userPrizes.map((prize) => (
+      <div
+        class="flex items-center p-3 bg-blue-50/80 dark:bg-slate-800/50 rounded-lg"
+      >
+        <div class="p-2 rounded-full bg-blue-100 dark:bg-slate-700 mr-3">
+          <ShoppingBag class="w-4 h-4 text-blue-600 dark:text-blue-400" />
+        </div>
+        <div class="flex-grow flex items-center justify-between">
+          <div class="text-sm font-medium text-gray-800 dark:text-gray-200">
+            {prize.name}
+          </div>
+          <div class="text-sm font-medium text-blue-600 dark:text-blue-400 ml-2">
+            {prize.count}x
+          </div>
+        </div>
+      </div>
+    ))}
+  </ul>
+
+  <h2 class="text-2xl font-bold mt-8 mb-2">XP History</h2>
+
+  {userData.xp && userData.xp.history.length > 0 ? (
+    <div class="flex flex-col gap-2">
+      {userData.xp.history.map((entry) => (
+        <div
+          class={`flex items-center p-3 rounded-lg ${
+            entry.xp > 0
+              ? 'bg-green-100/80 dark:bg-green-900/30'
+              : 'bg-red-50/80 dark:bg-red-900/20'
+          }`}
+        >
+          <div class={`p-2 rounded-full mr-3 ${
+            entry.xp > 0
+              ? 'bg-green-200 dark:bg-green-800/50'
+              : 'bg-red-100 dark:bg-red-800/50'
+          }`}>
+            {entry.xp > 0 ? (
+              <Plus class="w-4 h-4 text-green-600 dark:text-green-400" />
+            ) : (
+              <Minus class="w-4 h-4 text-red-600 dark:text-red-400" />
+            )}
+          </div>
+          <div class="flex-grow">
+            <div class="text-sm text-gray-600 dark:text-gray-300">{entry.reason}</div>
+          </div>
+          <div class={`font-mono font-medium ${
+            entry.xp > 0
+              ? 'text-green-600 dark:text-green-400'
+              : 'text-red-600 dark:text-red-400'
+          }`}>
+            {entry.xp > 0 ? '+' : ''}{entry.xp} XP
+          </div>
+        </div>
+      ))}
+    </div>
+  ) : (
+    <p class="text-muted-foreground dark:text-gray-400">No XP history yet</p>
+  )}
+</BaseLayout>
+```
+
+========= [./pages/users/unauthorized.astro] ===========
+```
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import { ArrowLeft, Lock } from "lucide-svelte";
+---
+
+<BaseLayout>
+  <div class="flex flex-col items-center justify-center text-center">
+    <div class="rounded-full bg-blue-100/10 p-4 dark:bg-blue-900/20">
+      <Lock class="h-8 w-8 text-blue-500 dark:text-blue-400" />
+    </div>
+
+    <div class="space-y-2">
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
+        Private Profile
+      </h1>
+      <p class="max-w-sm text-gray-600 dark:text-gray-300">
+        You can only view your own profile.
+      </p>
+    </div>
+  </div>
+</BaseLayout>
+```
+
+========= [./pages/index.astro] ===========
+```
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import XPLeaderboard from "@components/XPLeaderboard.svelte";
+import AddXPModal from "@components/AddXPModal.svelte";
+
+const currentUser = await Astro.locals.currentUser();
+---
+
+<BaseLayout>
+  {currentUser && <AddXPModal mockUser={currentUser} client:idle />}
+
+  <div class="h-4"></div>
+
+  <XPLeaderboard client:idle />
+</BaseLayout>
+```
+
+========= [./styles/app.css] ===========
+```
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 72.2% 50.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --ring: 222.2 84% 4.9%;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --ring: 212.7 26.8% 83.9%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Support for Clerk */
+.cl-formButtonPrimary {
+  @apply inline-flex h-9 items-center justify-center whitespace-nowrap rounded-md bg-primary px-3 font-medium text-primary-foreground !shadow-none ring-offset-background transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+}
+
+.cl-card,
+.cl-socialButtonsBlockButton,
+.cl-alert,
+.cl-phoneInputBox,
+.cl-userButtonPopoverCard {
+  @apply rounded-lg border border-input bg-background;
+}
+
+.cl-headerTitle,
+.cl-socialButtonsBlockButtonText,
+.cl-loading,
+.cl-formFieldLabel,
+.cl-formHeaderTitle,
+.cl-selectButton__countryCode,
+.cl-selectButton__countryCode p,
+.cl-selectOption p,
+.cl-selectOption div,
+.cl-modalCloseButton,
+.cl-navbarButton,
+.cl-breadcrumbsItem.cl-breadcrumbsItem__currentPage,
+.cl-profileSectionTitle p,
+.cl-userPreviewTextContainer,
+.cl-profileSectionContent p,
+.cl-form p,
+.cl-accordionTriggerButton {
+  @apply dark:text-foreground;
+}
+
+.cl-headerSubtitle,
+.cl-dividerText,
+.cl-footerActionText,
+.cl-alertText,
+.cl-formFieldInfoText,
+.cl-formFieldSuccessText,
+.cl-identityPreviewText,
+.cl-userButtonPopoverActionButton,
+.cl-userButtonPopoverActionButton svg,
+.cl-userButtonPopoverActionButtonText,
+.cl-userButtonPopoverFooter p,
+.cl-userButtonPopoverFooter a,
+.cl-formHeaderSubtitle,
+.cl-breadcrumbsItem,
+.cl-breadcrumbsItemDivider,
+.cl-fileDropAreaHint,
+.cl-fileDropAreaFooterHint,
+.cl-form
+  p[data-localization-key="userProfile.emailAddressPage.emailCode.formHint"],
+p[data-localization-key="userProfile.profilePage.successMessage"] {
+  @apply text-muted-foreground;
+}
+
+.cl-dividerLine {
+  @apply bg-border;
+}
+
+.cl-formFieldInput[type="text"],
+.cl-formFieldInput[type="email"],
+.cl-formFieldInput[type="password"] {
+  @apply flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-foreground ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+.cl-footerActionLink {
+  @apply text-accent-foreground underline hover:text-accent-foreground/90;
+}
+
+.cl-otpCodeFieldInput {
+  @apply !border !border-input text-foreground;
+}
+
+.cl-formResendCodeLink {
+  @apply text-primary disabled:opacity-90;
+}
+
+.cl-selectSearchInput__countryCode {
+  @apply flex h-10 w-full rounded-md border border-b border-input bg-background text-foreground ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+.cl-selectOptionsContainer__countryCode {
+  @apply border border-input bg-background;
+}
+
+.cl-internal-icon,
+.cl-userPreviewSecondaryIdentifier__userButton {
+  @apply text-foreground;
+}
+
+button[data-localization-key="userProfile.start.dangerSection.deleteAccountButton"] {
+  @apply bg-destructive text-destructive-foreground hover:bg-destructive/90;
+}
+
+.cl-fileDropAreaBox {
+  @apply dark:bg-gray-900;
+}
+
+.cl-fileDropAreaIconBox {
+  @apply dark:bg-gray-800;
+}
+
+.cl-fileDropAreaIcon {
+  @apply dark:text-gray-400;
+}
+
+.cl-fileDropAreaButtonPrimary {
+  @apply h-10 px-4 py-2 text-foreground transition-colors hover:bg-secondary hover:text-accent-foreground;
+}
+
+.cl-userButtonPopoverActionButton,
+.cl-profileSectionPrimaryButton,
+.cl-accordionTriggerButton,
+.cl-navbarButton {
+  @apply hover:bg-accent hover:text-accent-foreground;
+}
+
+.cl-card {
+  @apply rounded-lg shadow-md;
+}
+
+.cl-userButtonPopoverCard {
+  @apply rounded-md;
+}
+
+.cl-userButtonPopoverFooter a {
+  @apply hover:text-muted-foreground;
+}
+
+.cl-badge {
+  @apply rounded-full border border-input bg-background px-2.5 py-0.5 text-xs text-foreground !shadow-none;
+}
+
+.cl-badge[data-localization-key="badge__unverified"] {
+  @apply border bg-transparent text-destructive dark:text-red-500;
+}
+
+.cl-formButtonReset {
+  @apply text-foreground hover:bg-secondary;
+}
+
+.cl-footer {
+  @apply rounded-b-lg border-x border-b bg-background bg-gradient-to-t from-background to-background text-muted-foreground;
+}
+.cl-userButtonPopoverFooter {
+  @apply rounded-b-lg bg-gradient-to-t from-background to-background;
+}
+
+.cl-signIn-start,
+.cl-signUp-start,
+.cl-signIn-password,
+.cl-signIn-alternativeMethods,
+.cl-signIn-emailCode {
+  @apply rounded-b-none border-b-0;
+}
+
+.cl-cardBox {
+  @apply rounded-lg shadow-sm;
+}
+
+.cl-socialButtonsBlockButton {
+  @apply h-10 !border;
+}
+
+.cl-alternativeMethods .cl-alternativeMethodsBlockButton {
+  @apply h-10 !border border-input text-muted-foreground;
+}
+
+.cl-alternativeMethodsBlockButton {
+  @apply h-10 !shadow-none;
+}
+
+.cl-navbar {
+  @apply rounded-lg border-y border-l bg-gradient-to-t from-background to-background;
+}
+
+.cl-scrollBox {
+  @apply rounded-lg rounded-l-none border border-input bg-gradient-to-t from-background to-background;
+}
+
+h1[data-localization-key="userProfile.navbar.title"] {
+  @apply text-foreground;
+}
+
+.cl-profilePage > .cl-header {
+  @apply border-b;
+}
+
+.cl-profileSection__profile,
+.cl-profileSection__emailAddresses {
+  @apply border-b;
+}
+
+.cl-menuButton {
+  @apply text-foreground hover:text-foreground;
+}
+
+.cl-menuList {
+  @apply border border-input bg-background;
+}
+
+.cl-actionCard {
+  @apply border border-input bg-background;
+}
+
+.cl-menuItem[data-color="neutral"] {
+  @apply text-foreground hover:bg-muted;
+}
+
+.cl-avatarImageActionsUpload {
+  @apply !border border-input text-foreground;
+}
+
+.cl-userButtonPopoverMain {
+  @apply rounded-lg border-input bg-background;
+}
+```
+
+========= [./utils.ts] ===========
+```
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+import { cubicOut } from "svelte/easing";
+import type { TransitionConfig } from "svelte/transition";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
+type FlyAndScaleParams = {
+  y?: number;
+  x?: number;
+  start?: number;
+  duration?: number;
+};
+
+export const flyAndScale = (
+  node: Element,
+  params: FlyAndScaleParams = { y: -8, x: 0, start: 0.95, duration: 150 },
+): TransitionConfig => {
+  const style = getComputedStyle(node);
+  const transform = style.transform === "none" ? "" : style.transform;
+
+  const scaleConversion = (
+    valueA: number,
+    scaleA: [number, number],
+    scaleB: [number, number],
+  ) => {
+    const [minA, maxA] = scaleA;
+    const [minB, maxB] = scaleB;
+
+    const percentage = (valueA - minA) / (maxA - minA);
+    const valueB = percentage * (maxB - minB) + minB;
+
+    return valueB;
+  };
+
+  const styleToString = (
+    style: Record<string, number | string | undefined>,
+  ): string => {
+    return Object.keys(style).reduce((str, key) => {
+      if (style[key] === undefined) return str;
+      return str + `${key}:${style[key]};`;
+    }, "");
+  };
+
+  return {
+    duration: params.duration ?? 200,
+    delay: 0,
+    css: (t) => {
+      const y = scaleConversion(t, [0, 1], [params.y ?? 5, 0]);
+      const x = scaleConversion(t, [0, 1], [params.x ?? 0, 0]);
+      const scale = scaleConversion(t, [0, 1], [params.start ?? 0.95, 1]);
+
+      return styleToString({
+        transform: `${transform} translate3d(${x}px, ${y}px, 0) scale(${scale})`,
+        opacity: t,
+      });
+    },
+    easing: cubicOut,
+  };
+};
+```
+
+========= [./components/Header.astro] ===========
+```
+---
+import { Button } from "@components/ui/button";
+import {
+  SignedIn,
+  SignedOut,
+  SignInButton,
+  UserButton,
+} from "@clerk/astro/components";
+import ThemeToggle from "@components/ThemeToggle.svelte";
+---
+
+<header>
+  <nav class="flex px-4 py-2">
+    <SignedOut>
+      <SignInButton mode="modal" asChild={true}>
+        <Button>Sign In!</Button>
+      </SignInButton>
+    </SignedOut>
+
+    <SignedIn>
+      <UserButton />
+    </SignedIn>
+
+    <div class="grow"></div>
+
+    <ThemeToggle client:load />
+  </nav>
+</header>
+```
+
+========= [./components/XPLeaderboard.svelte] ===========
+```
+<script lang="ts">
+  import { firestore } from "@lib/firebase";
+  import {
+    doc,
+    collection,
+    onSnapshot,
+    query,
+    orderBy,
+    limit,
+  } from "firebase/firestore";
+  import { onMount } from "svelte";
+  import XpLeaderboardUser from "./XPLeaderboardUser.svelte";
+  import {
+    type UserExperience,
+    userExperienceSchema,
+  } from "@lib/firebase/types";
+
+  let experiences: UserExperience[] | null = null;
+
+  onMount(() => {
+    const experienceCollection = query(
+      collection(firestore, "experience"),
+      orderBy("xp", "desc"),
+      limit(10),
+    );
+
+    onSnapshot(experienceCollection, (querySnapshot) => {
+      experiences = querySnapshot.docs.map((doc) => {
+        const data = doc.data();
+
+        return userExperienceSchema.parse({
+          id: doc.id,
+          xp: data.xp,
+          history: data.history,
+        });
+      });
+    });
+  });
+</script>
+
+{#if !experiences}
+  <p>Loading...</p>
+{:else}
+  <div class="flex flex-col gap-2">
+    {#each experiences as experience, i}
+      <XpLeaderboardUser {experience} rank={i + 1} />
+    {/each}
+  </div>
+{/if}
+```
+
+========= [./components/AddXPModal.svelte] ===========
+```
+<script lang="ts">
+  import { $userStore as userStore } from "@clerk/astro/client";
+  import * as Dialog from "@components/ui/dialog";
+  import { Button } from "@components/ui/button";
+  import SelectUser from "./SelectUser.svelte";
+  import type { User } from "@clerk/astro/server";
+  import { displayUser } from "@lib/users/utils";
+  import { Label } from "@components/ui/label";
+  import { Input } from "@components/ui/input";
+  import { toast } from "svelte-sonner";
+
+  $: isAdmin = $userStore?.publicMetadata.isAdmin;
+
+  export let mockUser: User;
+
+  let open = false;
+
+  let selectedUser: User | null = null;
+  let xpToGrant: number | null = null;
+  let reason: string | null = null;
+
+  const onUserSelected = (user: User) => {
+    selectedUser = user;
+  };
+
+  const handleSubmit = async () => {
+    if (!selectedUser || !xpToGrant || !reason) {
+      return;
+    }
+
+    const resPromise = fetch(`/api/users/${selectedUser.id}/xp`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ amount: Number(xpToGrant), reason }),
+    }).then((res) => {
+      open = false;
+      selectedUser = null;
+      xpToGrant = null;
+      reason = null;
+
+      return res;
+    });
+
+    toast.promise(resPromise, {
+      loading: "Granting XP...",
+      success: "XP granted!",
+      error: "Failed to grant XP!",
+    });
+  };
+</script>
+
+{#if isAdmin}
+  <Dialog.Root bind:open>
+    <Dialog.Trigger asChild let:builder>
+      <Button builders={[builder]}>Grant XP</Button>
+    </Dialog.Trigger>
+    <Dialog.Content>
+      {#if !selectedUser}
+        <Dialog.Title>Grant XP</Dialog.Title>
+
+        <SelectUser {mockUser} {onUserSelected} />
+      {:else}
+        <Dialog.Title>Granting XP to {displayUser(selectedUser)}</Dialog.Title>
+
+        <form class="grid gap-4 py-4" on:submit|preventDefault={handleSubmit}>
+          <div class="grid grid-cols-4 items-center gap-4">
+            <Label for="amount" class="text-right">Amount</Label>
+            <Input
+              id="amount"
+              type="number"
+              placeholder="How much XP are you granting?"
+              class="col-span-3"
+              bind:value={xpToGrant}
+              required
+            />
+          </div>
+          <div class="grid grid-cols-4 items-center gap-4">
+            <Label for="reason" class="text-right">Reason</Label>
+            <Input
+              id="reason"
+              placeholder="Why are you granting XP?"
+              class="col-span-3"
+              bind:value={reason}
+              required
+            />
+          </div>
+
+          <Dialog.Footer>
+            <Button type="submit">Grant!</Button>
+          </Dialog.Footer>
+        </form>
+      {/if}
+    </Dialog.Content>
+  </Dialog.Root>
+{/if}
+```
+
+========= [./components/ThemeToggle.svelte] ===========
+```
+<script lang="ts">
+  import Sun from "lucide-svelte/icons/sun";
+  import Moon from "lucide-svelte/icons/moon";
+
+  import { toggleMode } from "mode-watcher";
+  import { Button } from "$lib/components/ui/button/index.js";
+</script>
+
+<Button on:click={toggleMode} variant="outline" size="icon">
+  <Sun
+    class="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0"
+  />
+  <Moon
+    class="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100"
+  />
+  <span class="sr-only">Toggle theme</span>
+</Button>
+```
+
+========= [./components/ui/button/index.ts] ===========
+```
+import { type VariantProps, tv } from "tailwind-variants";
+import type { Button as ButtonPrimitive } from "bits-ui";
+import Root from "./button.svelte";
+
+const buttonVariants = tv({
+  base: "ring-offset-background focus-visible:ring-ring inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+  variants: {
+    variant: {
+      default: "bg-primary text-primary-foreground hover:bg-primary/90",
+      destructive:
+        "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+      outline:
+        "border-input bg-background hover:bg-accent hover:text-accent-foreground border",
+      secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+      ghost: "hover:bg-accent hover:text-accent-foreground",
+      link: "text-primary underline-offset-4 hover:underline",
+    },
+    size: {
+      default: "h-10 px-4 py-2",
+      sm: "h-9 rounded-md px-3",
+      lg: "h-11 rounded-md px-8",
+      icon: "h-10 w-10",
+    },
+  },
+  defaultVariants: {
+    variant: "default",
+    size: "default",
+  },
+});
+
+type Variant = VariantProps<typeof buttonVariants>["variant"];
+type Size = VariantProps<typeof buttonVariants>["size"];
+
+type Props = ButtonPrimitive.Props & {
+  variant?: Variant;
+  size?: Size;
+};
+
+type Events = ButtonPrimitive.Events;
+
+export {
+  Root,
+  type Props,
+  type Events,
+  //
+  Root as Button,
+  type Props as ButtonProps,
+  type Events as ButtonEvents,
+  buttonVariants,
+};
+```
+
+========= [./components/ui/button/button.svelte] ===========
+```
+<script lang="ts">
+  import { Button as ButtonPrimitive } from "bits-ui";
+  import { type Events, type Props, buttonVariants } from "./index.js";
+  import { cn } from "$lib/utils.js";
+
+  type $$Props = Props;
+  type $$Events = Events;
+
+  let className: $$Props["class"] = undefined;
+  export let variant: $$Props["variant"] = "default";
+  export let size: $$Props["size"] = "default";
+  export let builders: $$Props["builders"] = [];
+  export { className as class };
+</script>
+
+<ButtonPrimitive.Root
+  {builders}
+  class={cn(buttonVariants({ variant, size, className }))}
+  type="button"
+  {...$$restProps}
+  on:click
+  on:keydown
+>
+  <slot />
+</ButtonPrimitive.Root>
+```
+
+========= [./components/ui/input/index.ts] ===========
+```
+import Root from "./input.svelte";
+
+export type FormInputEvent<T extends Event = Event> = T & {
+  currentTarget: EventTarget & HTMLInputElement;
+};
+export type InputEvents = {
+  blur: FormInputEvent<FocusEvent>;
+  change: FormInputEvent<Event>;
+  click: FormInputEvent<MouseEvent>;
+  focus: FormInputEvent<FocusEvent>;
+  focusin: FormInputEvent<FocusEvent>;
+  focusout: FormInputEvent<FocusEvent>;
+  keydown: FormInputEvent<KeyboardEvent>;
+  keypress: FormInputEvent<KeyboardEvent>;
+  keyup: FormInputEvent<KeyboardEvent>;
+  mouseover: FormInputEvent<MouseEvent>;
+  mouseenter: FormInputEvent<MouseEvent>;
+  mouseleave: FormInputEvent<MouseEvent>;
+  mousemove: FormInputEvent<MouseEvent>;
+  paste: FormInputEvent<ClipboardEvent>;
+  input: FormInputEvent<InputEvent>;
+  wheel: FormInputEvent<WheelEvent>;
+};
+
+export {
+  Root,
+  //
+  Root as Input,
+};
+```
+
+========= [./components/ui/input/input.svelte] ===========
+```
+<script lang="ts">
+  import type { HTMLInputAttributes } from "svelte/elements";
+  import type { InputEvents } from "./index.js";
+  import { cn } from "$lib/utils.js";
+
+  type $$Props = HTMLInputAttributes;
+  type $$Events = InputEvents;
+
+  let className: $$Props["class"] = undefined;
+  export let value: $$Props["value"] = undefined;
+  export { className as class };
+
+  // Workaround for https://github.com/sveltejs/svelte/issues/9305
+  // Fixed in Svelte 5, but not backported to 4.x.
+  export let readonly: $$Props["readonly"] = undefined;
+</script>
+
+<input
+  class={cn(
+    "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+    className,
+  )}
+  bind:value
+  {readonly}
+  on:blur
+  on:change
+  on:click
+  on:focus
+  on:focusin
+  on:focusout
+  on:keydown
+  on:keypress
+  on:keyup
+  on:mouseover
+  on:mouseenter
+  on:mouseleave
+  on:mousemove
+  on:paste
+  on:input
+  on:wheel|passive
+  {...$$restProps}
+/>
+```
+
+========= [./components/ui/popover/popover-content.svelte] ===========
+```
+<script lang="ts">
+  import { Popover as PopoverPrimitive } from "bits-ui";
+  import { cn, flyAndScale } from "$lib/utils.js";
+
+  type $$Props = PopoverPrimitive.ContentProps;
+  let className: $$Props["class"] = undefined;
+  export let transition: $$Props["transition"] = flyAndScale;
+  export let transitionConfig: $$Props["transitionConfig"] = undefined;
+  export { className as class };
+</script>
+
+<PopoverPrimitive.Content
+  {transition}
+  {transitionConfig}
+  class={cn(
+    "z-50 w-72 rounded-md border bg-popover p-4 text-popover-foreground shadow-md outline-none",
+    className,
+  )}
+  {...$$restProps}
+>
+  <slot />
+</PopoverPrimitive.Content>
+```
+
+========= [./components/ui/popover/index.ts] ===========
+```
+import { Popover as PopoverPrimitive } from "bits-ui";
+import Content from "./popover-content.svelte";
+const Root = PopoverPrimitive.Root;
+const Trigger = PopoverPrimitive.Trigger;
+const Close = PopoverPrimitive.Close;
+
+export {
+  Root,
+  Content,
+  Trigger,
+  Close,
+  //
+  Root as Popover,
+  Content as PopoverContent,
+  Trigger as PopoverTrigger,
+  Close as PopoverClose,
+};
+```
+
+========= [./components/ui/command/command-item.svelte] ===========
+```
+<script lang="ts">
+  import { Command as CommandPrimitive } from "cmdk-sv";
+  import { cn } from "$lib/utils.js";
+
+  type $$Props = CommandPrimitive.ItemProps;
+
+  export let asChild = false;
+
+  let className: string | undefined | null = undefined;
+  export { className as class };
+</script>
+
+<CommandPrimitive.Item
+  {asChild}
+  class={cn(
+    "relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none aria-selected:bg-accent aria-selected:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+    className,
+  )}
+  {...$$restProps}
+  let:action
+  let:attrs
+>
+  <slot {action} {attrs} />
+</CommandPrimitive.Item>
+```
+
+========= [./components/ui/command/command-separator.svelte] ===========
+```
+<script lang="ts">
+  import { Command as CommandPrimitive } from "cmdk-sv";
+  import { cn } from "$lib/utils.js";
+
+  type $$Props = CommandPrimitive.SeparatorProps;
+  let className: string | undefined | null = undefined;
+  export { className as class };
+</script>
+
+<CommandPrimitive.Separator
+  class={cn("-mx-1 h-px bg-border", className)}
+  {...$$restProps}
+/>
+```
+
+========= [./components/ui/command/command.svelte] ===========
+```
+<script lang="ts">
+  import { Command as CommandPrimitive } from "cmdk-sv";
+  import { cn } from "$lib/utils.js";
+
+  type $$Props = CommandPrimitive.CommandProps;
+
+  export let value: $$Props["value"] = undefined;
+
+  let className: string | undefined | null = undefined;
+  export { className as class };
+</script>
+
+<CommandPrimitive.Root
+  class={cn(
+    "flex h-full w-full flex-col overflow-hidden rounded-md bg-popover text-popover-foreground",
+    className,
+  )}
+  bind:value
+  {...$$restProps}
+>
+  <slot />
+</CommandPrimitive.Root>
+```
+
+========= [./components/ui/command/command-dialog.svelte] ===========
+```
+<script lang="ts">
+  import type { Dialog as DialogPrimitive } from "bits-ui";
+  import type { Command as CommandPrimitive } from "cmdk-sv";
+  import Command from "./command.svelte";
+  import * as Dialog from "$lib/components/ui/dialog/index.js";
+
+  type $$Props = DialogPrimitive.Props & CommandPrimitive.CommandProps;
+
+  export let open: $$Props["open"] = false;
+  export let value: $$Props["value"] = undefined;
+</script>
+
+<Dialog.Root bind:open {...$$restProps}>
+  <Dialog.Content class="overflow-hidden p-0 shadow-lg">
+    <Command
+      class="[&_[data-cmdk-group-heading]]:px-2 [&_[data-cmdk-group-heading]]:font-medium [&_[data-cmdk-group-heading]]:text-muted-foreground [&_[data-cmdk-group]:not([hidden])_~[data-cmdk-group]]:pt-0 [&_[data-cmdk-group]]:px-2 [&_[data-cmdk-input-wrapper]_svg]:h-5 [&_[data-cmdk-input-wrapper]_svg]:w-5 [&_[data-cmdk-input]]:h-12 [&_[data-cmdk-item]]:px-2 [&_[data-cmdk-item]]:py-3 [&_[data-cmdk-item]_svg]:h-5 [&_[data-cmdk-item]_svg]:w-5"
+      {...$$restProps}
+      bind:value
+    >
+      <slot />
+    </Command>
+  </Dialog.Content>
+</Dialog.Root>
+```
+
+========= [./components/ui/command/command-empty.svelte] ===========
+```
+<script lang="ts">
+  import { Command as CommandPrimitive } from "cmdk-sv";
+  import { cn } from "$lib/utils.js";
+
+  type $$Props = CommandPrimitive.EmptyProps;
+  let className: string | undefined | null = undefined;
+  export { className as class };
+</script>
+
+<CommandPrimitive.Empty
+  class={cn("py-6 text-center text-sm", className)}
+  {...$$restProps}
+>
+  <slot />
+</CommandPrimitive.Empty>
+```
+
+========= [./components/ui/command/command-list.svelte] ===========
+```
+<script lang="ts">
+  import { Command as CommandPrimitive } from "cmdk-sv";
+  import { cn } from "$lib/utils.js";
+
+  type $$Props = CommandPrimitive.ListProps;
+  let className: string | undefined | null = undefined;
+  export { className as class };
+</script>
+
+<CommandPrimitive.List
+  class={cn("max-h-[300px] overflow-y-auto overflow-x-hidden", className)}
+  {...$$restProps}
+>
+  <slot />
+</CommandPrimitive.List>
+```
+
+========= [./components/ui/command/index.ts] ===========
+```
+import { Command as CommandPrimitive } from "cmdk-sv";
+
+import Root from "./command.svelte";
+import Dialog from "./command-dialog.svelte";
+import Empty from "./command-empty.svelte";
+import Group from "./command-group.svelte";
+import Item from "./command-item.svelte";
+import Input from "./command-input.svelte";
+import List from "./command-list.svelte";
+import Separator from "./command-separator.svelte";
+import Shortcut from "./command-shortcut.svelte";
+
+const Loading = CommandPrimitive.Loading;
+
+export {
+  Root,
+  Dialog,
+  Empty,
+  Group,
+  Item,
+  Input,
+  List,
+  Separator,
+  Shortcut,
+  Loading,
+  //
+  Root as Command,
+  Dialog as CommandDialog,
+  Empty as CommandEmpty,
+  Group as CommandGroup,
+  Item as CommandItem,
+  Input as CommandInput,
+  List as CommandList,
+  Separator as CommandSeparator,
+  Shortcut as CommandShortcut,
+  Loading as CommandLoading,
+};
+```
+
+========= [./components/ui/command/command-group.svelte] ===========
+```
+<script lang="ts">
+  import { Command as CommandPrimitive } from "cmdk-sv";
+  import { cn } from "$lib/utils.js";
+  type $$Props = CommandPrimitive.GroupProps;
+
+  let className: string | undefined | null = undefined;
+  export { className as class };
+</script>
+
+<CommandPrimitive.Group
+  class={cn(
+    "overflow-hidden p-1 text-foreground [&_[data-cmdk-group-heading]]:px-2 [&_[data-cmdk-group-heading]]:py-1.5 [&_[data-cmdk-group-heading]]:text-xs [&_[data-cmdk-group-heading]]:font-medium [&_[data-cmdk-group-heading]]:text-muted-foreground",
+    className,
+  )}
+  {...$$restProps}
+>
+  <slot />
+</CommandPrimitive.Group>
+```
+
+========= [./components/ui/command/command-shortcut.svelte] ===========
+```
+<script lang="ts">
+  import type { HTMLAttributes } from "svelte/elements";
+  import { cn } from "$lib/utils.js";
+
+  type $$Props = HTMLAttributes<HTMLSpanElement>;
+
+  let className: string | undefined | null = undefined;
+  export { className as class };
+</script>
+
+<span
+  class={cn("ml-auto text-xs tracking-widest text-muted-foreground", className)}
+  {...$$restProps}
+>
+  <slot />
+</span>
+```
+
+========= [./components/ui/command/command-input.svelte] ===========
+```
+<script lang="ts">
+  import { Command as CommandPrimitive } from "cmdk-sv";
+  import Search from "lucide-svelte/icons/search";
+  import { cn } from "$lib/utils.js";
+
+  type $$Props = CommandPrimitive.InputProps;
+
+  let className: string | undefined | null = undefined;
+  export { className as class };
+  export let value: string = "";
+</script>
+
+<div class="flex items-center border-b px-2" data-cmdk-input-wrapper="">
+  <Search class="mr-2 h-4 w-4 shrink-0 opacity-50" />
+  <CommandPrimitive.Input
+    class={cn(
+      "flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
+      className,
+    )}
+    {...$$restProps}
+    bind:value
+  />
+</div>
+```
+
+========= [./components/ui/card/card-title.svelte] ===========
+```
+<script lang="ts">
+	import type { HTMLAttributes } from "svelte/elements";
+	import type { HeadingLevel } from "./index.js";
+	import { cn } from "$lib/utils.js";
+
+	type $$Props = HTMLAttributes<HTMLHeadingElement> & {
+		tag?: HeadingLevel;
+	};
+
+	let className: $$Props["class"] = undefined;
+	export let tag: $$Props["tag"] = "h3";
+	export { className as class };
+</script>
+
+<svelte:element
+	this={tag}
+	class={cn("text-lg font-semibold leading-none tracking-tight", className)}
+	{...$$restProps}
+>
+	<slot />
+</svelte:element>
+```
+
+========= [./components/ui/card/index.ts] ===========
+```
+import Root from "./card.svelte";
+import Content from "./card-content.svelte";
+import Description from "./card-description.svelte";
+import Footer from "./card-footer.svelte";
+import Header from "./card-header.svelte";
+import Title from "./card-title.svelte";
+
+export {
+	Root,
+	Content,
+	Description,
+	Footer,
+	Header,
+	Title,
+	//
+	Root as Card,
+	Content as CardContent,
+	Description as CardDescription,
+	Footer as CardFooter,
+	Header as CardHeader,
+	Title as CardTitle,
+};
+
+export type HeadingLevel = "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
+```
+
+========= [./components/ui/card/card-header.svelte] ===========
+```
+<script lang="ts">
+	import type { HTMLAttributes } from "svelte/elements";
+	import { cn } from "$lib/utils.js";
+
+	type $$Props = HTMLAttributes<HTMLDivElement>;
+
+	let className: $$Props["class"] = undefined;
+	export { className as class };
+</script>
+
+<div class={cn("flex flex-col space-y-1.5 p-6 pb-0", className)} {...$$restProps}>
+	<slot />
+</div>
+```
+
+========= [./components/ui/card/card-content.svelte] ===========
+```
+<script lang="ts">
+	import type { HTMLAttributes } from "svelte/elements";
+	import { cn } from "$lib/utils.js";
+
+	type $$Props = HTMLAttributes<HTMLDivElement>;
+
+	let className: $$Props["class"] = undefined;
+	export { className as class };
+</script>
+
+<div class={cn("p-6", className)} {...$$restProps}>
+	<slot />
+</div>
+```
+
+========= [./components/ui/card/card.svelte] ===========
+```
+<script lang="ts">
+	import type { HTMLAttributes } from "svelte/elements";
+	import { cn } from "$lib/utils.js";
+
+	type $$Props = HTMLAttributes<HTMLDivElement>;
+
+	let className: $$Props["class"] = undefined;
+	export { className as class };
+</script>
+
+<div
+	class={cn("bg-card text-card-foreground rounded-lg border shadow-sm", className)}
+	{...$$restProps}
+>
+	<slot />
+</div>
+```
+
+========= [./components/ui/card/card-description.svelte] ===========
+```
+<script lang="ts">
+	import type { HTMLAttributes } from "svelte/elements";
+	import { cn } from "$lib/utils.js";
+
+	type $$Props = HTMLAttributes<HTMLParagraphElement>;
+
+	let className: $$Props["class"] = undefined;
+	export { className as class };
+</script>
+
+<p class={cn("text-muted-foreground text-sm", className)} {...$$restProps}>
+	<slot />
+</p>
+```
+
+========= [./components/ui/card/card-footer.svelte] ===========
+```
+<script lang="ts">
+	import type { HTMLAttributes } from "svelte/elements";
+	import { cn } from "$lib/utils.js";
+
+	type $$Props = HTMLAttributes<HTMLDivElement>;
+
+	let className: $$Props["class"] = undefined;
+	export { className as class };
+</script>
+
+<div class={cn("flex items-center p-6 pt-0", className)} {...$$restProps}>
+	<slot />
+</div>
+```
+
+========= [./components/ui/dialog/dialog-overlay.svelte] ===========
+```
+<script lang="ts">
+  import { Dialog as DialogPrimitive } from "bits-ui";
+  import { fade } from "svelte/transition";
+  import { cn } from "$lib/utils.js";
+
+  type $$Props = DialogPrimitive.OverlayProps;
+
+  let className: $$Props["class"] = undefined;
+  export let transition: $$Props["transition"] = fade;
+  export let transitionConfig: $$Props["transitionConfig"] = {
+    duration: 150,
+  };
+  export { className as class };
+</script>
+
+<DialogPrimitive.Overlay
+  {transition}
+  {transitionConfig}
+  class={cn("fixed inset-0 z-50 bg-background/80 backdrop-blur-sm", className)}
+  {...$$restProps}
+/>
+```
+
+========= [./components/ui/dialog/dialog-content.svelte] ===========
+```
+<script lang="ts">
+  import { Dialog as DialogPrimitive } from "bits-ui";
+  import X from "lucide-svelte/icons/x";
+  import * as Dialog from "./index.js";
+  import { cn, flyAndScale } from "$lib/utils.js";
+
+  type $$Props = DialogPrimitive.ContentProps;
+
+  let className: $$Props["class"] = undefined;
+  export let transition: $$Props["transition"] = flyAndScale;
+  export let transitionConfig: $$Props["transitionConfig"] = {
+    duration: 200,
+  };
+  export { className as class };
+</script>
+
+<Dialog.Portal>
+  <Dialog.Overlay />
+  <DialogPrimitive.Content
+    {transition}
+    {transitionConfig}
+    class={cn(
+      "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg sm:rounded-lg md:w-full",
+      className,
+    )}
+    {...$$restProps}
+  >
+    <slot />
+    <DialogPrimitive.Close
+      class="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+    >
+      <X class="h-4 w-4" />
+      <span class="sr-only">Close</span>
+    </DialogPrimitive.Close>
+  </DialogPrimitive.Content>
+</Dialog.Portal>
+```
+
+========= [./components/ui/dialog/dialog-portal.svelte] ===========
+```
+<script lang="ts">
+  import { Dialog as DialogPrimitive } from "bits-ui";
+  type $$Props = DialogPrimitive.PortalProps;
+</script>
+
+<DialogPrimitive.Portal {...$$restProps}>
+  <slot />
+</DialogPrimitive.Portal>
+```
+
+========= [./components/ui/dialog/dialog-description.svelte] ===========
+```
+<script lang="ts">
+  import { Dialog as DialogPrimitive } from "bits-ui";
+  import { cn } from "$lib/utils.js";
+
+  type $$Props = DialogPrimitive.DescriptionProps;
+
+  let className: $$Props["class"] = undefined;
+  export { className as class };
+</script>
+
+<DialogPrimitive.Description
+  class={cn("text-sm text-muted-foreground", className)}
+  {...$$restProps}
+>
+  <slot />
+</DialogPrimitive.Description>
+```
+
+========= [./components/ui/dialog/dialog-header.svelte] ===========
+```
+<script lang="ts">
+  import type { HTMLAttributes } from "svelte/elements";
+  import { cn } from "$lib/utils.js";
+
+  type $$Props = HTMLAttributes<HTMLDivElement>;
+
+  let className: $$Props["class"] = undefined;
+  export { className as class };
+</script>
+
+<div
+  class={cn("flex flex-col space-y-1.5 text-center sm:text-left", className)}
+  {...$$restProps}
+>
+  <slot />
+</div>
+```
+
+========= [./components/ui/dialog/dialog-footer.svelte] ===========
+```
+<script lang="ts">
+  import type { HTMLAttributes } from "svelte/elements";
+  import { cn } from "$lib/utils.js";
+
+  type $$Props = HTMLAttributes<HTMLDivElement>;
+
+  let className: $$Props["class"] = undefined;
+  export { className as class };
+</script>
+
+<div
+  class={cn(
+    "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2",
+    className,
+  )}
+  {...$$restProps}
+>
+  <slot />
+</div>
+```
+
+========= [./components/ui/dialog/index.ts] ===========
+```
+import { Dialog as DialogPrimitive } from "bits-ui";
+
+import Title from "./dialog-title.svelte";
+import Portal from "./dialog-portal.svelte";
+import Footer from "./dialog-footer.svelte";
+import Header from "./dialog-header.svelte";
+import Overlay from "./dialog-overlay.svelte";
+import Content from "./dialog-content.svelte";
+import Description from "./dialog-description.svelte";
+
+const Root = DialogPrimitive.Root;
+const Trigger = DialogPrimitive.Trigger;
+const Close = DialogPrimitive.Close;
+
+export {
+  Root,
+  Title,
+  Portal,
+  Footer,
+  Header,
+  Trigger,
+  Overlay,
+  Content,
+  Description,
+  Close,
+  //
+  Root as Dialog,
+  Title as DialogTitle,
+  Portal as DialogPortal,
+  Footer as DialogFooter,
+  Header as DialogHeader,
+  Trigger as DialogTrigger,
+  Overlay as DialogOverlay,
+  Content as DialogContent,
+  Description as DialogDescription,
+  Close as DialogClose,
+};
+```
+
+========= [./components/ui/dialog/dialog-title.svelte] ===========
+```
+<script lang="ts">
+  import { Dialog as DialogPrimitive } from "bits-ui";
+  import { cn } from "$lib/utils.js";
+
+  type $$Props = DialogPrimitive.TitleProps;
+
+  let className: $$Props["class"] = undefined;
+  export { className as class };
+</script>
+
+<DialogPrimitive.Title
+  class={cn("text-lg font-semibold leading-none tracking-tight", className)}
+  {...$$restProps}
+>
+  <slot />
+</DialogPrimitive.Title>
+```
+
+========= [./components/ui/sonner/index.ts] ===========
+```
+export { default as Toaster } from "./sonner.svelte";
+```
+
+========= [./components/ui/sonner/sonner.svelte] ===========
+```
+<script lang="ts">
+  import {
+    Toaster as Sonner,
+    type ToasterProps as SonnerProps,
+  } from "svelte-sonner";
+  import { mode } from "mode-watcher";
+
+  type $$Props = SonnerProps;
+</script>
+
+<Sonner
+  theme={$mode}
+  class="toaster group"
+  toastOptions={{
+    classes: {
+      toast:
+        "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
+      description: "group-[.toast]:text-muted-foreground",
+      actionButton:
+        "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
+      cancelButton:
+        "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
+    },
+  }}
+  {...$$restProps}
+/>
+```
+
+========= [./components/ui/label/index.ts] ===========
+```
+import Root from "./label.svelte";
+
+export {
+  Root,
+  //
+  Root as Label,
+};
+```
+
+========= [./components/ui/label/label.svelte] ===========
+```
+<script lang="ts">
+  import { Label as LabelPrimitive } from "bits-ui";
+  import { cn } from "$lib/utils.js";
+
+  type $$Props = LabelPrimitive.Props;
+  type $$Events = LabelPrimitive.Events;
+
+  let className: $$Props["class"] = undefined;
+  export { className as class };
+</script>
+
+<LabelPrimitive.Root
+  class={cn(
+    "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
+    className,
+  )}
+  {...$$restProps}
+  on:mousedown
+>
+  <slot />
+</LabelPrimitive.Root>
+```
+
+========= [./components/SelectUser.svelte] ===========
+```
+<script lang="ts">
+  import type { User } from "@clerk/astro/server";
+  import { MockUserSelecter } from "@lib/users/types";
+
+  export let mockUser: User;
+  export let onUserSelected: (user: User) => void;
+
+  const userSelector = new MockUserSelecter(mockUser);
+
+  userSelector.selectUser().then((user) => {
+    onUserSelected(user);
+  });
+</script>
+
+<div class="flex flex-col items-center">
+  <h2 class="text-lg font-semibold">Select a user</h2>
+
+  <p class="text-muted-foreground">
+    Tap an NFC card onto your phone to select a user.
+  </p>
+</div>
+```
+
+========= [./components/XPLeaderboardUser.svelte] ===========
+```
+<script lang="ts">
+  import type { UserExperience } from "@lib/firebase/xp";
+  import { displayUser } from "@lib/users/utils";
+  import * as Popover from "@components/ui/popover";
+
+  export let experience: UserExperience;
+  export let rank: number;
+
+  const displayNamePromise = fetch(`/api/users/${experience.id}`)
+    .then((res) => res.json())
+    .then((user) => user.displayName);
+</script>
+
+<Popover.Root>
+  <Popover.Trigger class="w-full">
+    <div class="flex items-center justify-between rounded-md bg-muted p-3">
+      <div class="flex items-center space-x-3">
+        <span class="w-6 text-center text-lg font-semibold">
+          {rank}
+        </span>
+        <span>
+          {#await displayNamePromise}
+            <span class="text-muted-foreground">Loading...</span>
+          {:then displayName}
+            <span class="font-semibold">{displayName}</span>
+          {:catch}
+            <span>Unknown User</span>
+          {/await}
+        </span>
+      </div>
+      <span class="font-semibold">{experience.xp} XP</span>
+    </div>
+  </Popover.Trigger>
+  <Popover.Content>
+    <h3 class="font-semibold">History</h3>
+
+    <div class="flex flex-col gap-2">
+      {#each experience.history as entry}
+        <div class="flex items-center gap-1">
+          <span class="text-sm text-muted-foreground">{entry.reason}</span>
+          <span class="ml-auto">{entry.xp > 0 ? "+" : ""}{entry.xp}</span>
+        </div>
+      {/each}
+    </div>
+  </Popover.Content>
+</Popover.Root>
+```
+
+========= [./env.d.ts] ===========
+```
+/// <reference path="../.astro/types.d.ts" />
+/// <reference types="@clerk/astro/env" />
+
+interface ImportMetaEnv {
+  readonly PUBLIC_CLERK_PUBLISHABLE_KEY: string;
+  readonly CLERK_SECRET_KEY: string;
+
+  readonly FIREBASE_PRIVATE_KEY_ID: string;
+  readonly FIREBASE_PRIVATE_KEY: string;
+  readonly FIREBASE_PROJECT_ID: string;
+  readonly FIREBASE_CLIENT_EMAIL: string;
+  readonly FIREBASE_CLIENT_ID: string;
+  readonly FIREBASE_AUTH_URI: string;
+  readonly FIREBASE_TOKEN_URI: string;
+  readonly FIREBASE_AUTH_CERT_URL: string;
+  readonly FIREBASE_CLIENT_CERT_URL: string;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}
+```
+
+========= [./lib/firebase/events.ts] ===========
+```
+import { firestore } from "@lib/firebase/server.ts";
+import { eventSchema } from "@lib/firebase/types.ts";
+
+import type { Event } from "@lib/firebase/types.ts";
+
+const eventsCollection = firestore.collection('events');
+
+export const getAllEvents = async (): Promise<Event[]> => {
+  const snapshot = await eventsCollection.get();
+  return snapshot.docs.map((doc) => eventSchema.parse({ ...doc.data(), id: doc.id }));
+}
+```
+
+========= [./lib/firebase/server.ts] ===========
+```
+import type { ServiceAccount } from "firebase-admin";
+import { initializeApp, cert, getApps } from "firebase-admin/app";
+import { getFirestore } from "firebase-admin/firestore";
+
+const activeApps = getApps();
+const serviceAccount = {
+  type: "service_account",
+  project_id: import.meta.env.FIREBASE_PROJECT_ID,
+  private_key_id: import.meta.env.FIREBASE_PRIVATE_KEY_ID,
+  private_key: import.meta.env.FIREBASE_PRIVATE_KEY,
+  client_email: import.meta.env.FIREBASE_CLIENT_EMAIL,
+  client_id: import.meta.env.FIREBASE_CLIENT_ID,
+  auth_uri: import.meta.env.FIREBASE_AUTH_URI,
+  token_uri: import.meta.env.FIREBASE_TOKEN_URI,
+  auth_provider_x509_cert_url: import.meta.env.FIREBASE_AUTH_CERT_URL,
+  client_x509_cert_url: import.meta.env.FIREBASE_CLIENT_CERT_URL,
+};
+
+const initApp = () => {
+  console.info("Loading service account from env.");
+  return initializeApp({
+    credential: cert(serviceAccount as ServiceAccount),
+  });
+};
+
+export const app = activeApps.length === 0 ? initApp() : activeApps[0];
+export const firestore = getFirestore(app);
+```
+
+========= [./lib/firebase/index.ts] ===========
+```
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyDovTu77F0_sI2Z3zp6kwpzIx5_9snsUME",
+  authDomain: "counterspell-sv.firebaseapp.com",
+  projectId: "counterspell-sv",
+  storageBucket: "counterspell-sv.appspot.com",
+  messagingSenderId: "888228905363",
+  appId: "1:888228905363:web:71acfa5cca55b397d6e866",
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);
+export const firestore = getFirestore(app);
+```
+
+========= [./lib/firebase/prizes.ts] ===========
+```
+import { firestore } from "@lib/firebase/server.ts";
+import { prizeSchema } from "@lib/firebase/types.ts";
+
+const prizesCollection = firestore.collection('prizes');
+
+export const getAllPrizes = async () => {
+  const snapshot = await prizesCollection.get();
+  return snapshot.docs.map((doc) => prizeSchema.parse({ ...doc.data(), id: doc.id }));
+}
+
+export const buyPrize = async (prizeId: string, userId: string) => {
+  const prize = await prizesCollection.doc(prizeId).get();
+
+  const prizeData = prize.data();
+  if (!prize.exists || !prizeData) {
+    throw new Error("Prize not found");
+  }
+
+  if (prizeData.stock <= 0) {
+    throw new Error("Prize out of stock");
+  }
+
+  const user = await firestore.collection('experience').doc(userId).get();
+  const userData = user.data();
+  if (!user.exists || !userData) {
+    throw new Error("User not found");
+  }
+
+  if (userData.xp < prizeData.cost) {
+    throw new Error("Not enough XP");
+  }
+
+  await firestore.runTransaction(async (transaction) => {
+    transaction.update(prizesCollection.doc(prizeId), { stock: prizeData.stock - 1 });
+    transaction.update(firestore.collection('experience').doc(userId), { xp: userData.xp - prizeData.cost });
+    transaction.update(firestore.collection('experience').doc(userId), {
+      history: [
+        ...userData.history,
+        {
+          xp: -prizeData.cost,
+          timestamp: new Date(),
+          reason: `Bought prize: ${prizeData.name}`,
+        },
+      ],
+    });
+  });
+}
+```
+
+========= [./lib/firebase/xp.ts] ===========
+```
+import { app, firestore } from "./server";
+import { getFirestore } from "firebase-admin/firestore";
+import {
+  type UserExperience,
+  userExperienceSchema,
+} from "@lib/firebase/types.ts";
+
+const experienceCollection = firestore.collection("experience");
+
+export const getAllUsersExperience = async (): Promise<UserExperience[]> => {
+  const snapshot = await experienceCollection.get();
+  return snapshot.docs.map((doc) =>
+    userExperienceSchema.parse({ ...doc.data(), id: doc.id }),
+  );
+};
+
+export const getUserExperience = async (userId: string): Promise<UserExperience|null> => {
+  const doc = await experienceCollection.doc(userId).get();
+  if (!doc.exists) return null;
+  return userExperienceSchema.parse({ ...doc.data(), id: doc.id });
+}
+
+export const grantUserExperience = async (
+  userId: string,
+  amount: number,
+  reason: string,
+) => {
+  const userDoc = experienceCollection.doc(userId);
+  const userDocSnapshot = await userDoc.get();
+  const userDocData = userDocSnapshot.data();
+  if (userDocData) {
+    const history = userDocData.history as {
+      xp: number;
+      timestamp: Date;
+      reason: string;
+    }[];
+    history.push({
+      xp: amount,
+      timestamp: new Date(),
+      reason,
+    });
+    await userDoc.set({ xp: userDocData.xp + amount, history });
+  } else {
+    const history = [
+      {
+        xp: amount,
+        timestamp: new Date(),
+        reason,
+      },
+    ];
+    await userDoc.set({ xp: amount, history });
+  }
+};
+```
+
+========= [./lib/firebase/types.ts] ===========
+```
+import { z } from "zod";
+import { zodFirebaseTimestamp } from "@lib/utils.ts";
+
+export const userExperienceSchema = z.object({
+  id: z.string(),
+  xp: z.number(),
+  history: z.array(
+    z.object({
+      xp: z.number(),
+      timestamp: zodFirebaseTimestamp,
+      reason: z.string(),
+    }),
+  ),
+});
+export type UserExperience = z.infer<typeof userExperienceSchema>;
+
+export const userMetadataSchema = z.object({
+  eventsAttended: z.array(z.string()).default([]),
+  prizesRedeemed: z.array(z.string()).default([]),
+  isAdmin: z.boolean().default(false),
+})
+export type UserMetadata = z.infer<typeof userMetadataSchema>;
+
+export const eventSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+})
+export type Event = z.infer<typeof eventSchema>;
+
+export const prizeSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  cost: z.number(),
+  stock: z.number(),
+  imageUrl: z.string(),
+  description: z.string(),
+})
+
+export type Prize = z.infer<typeof prizeSchema>;
+```
+
+========= [./lib/utils.ts] ===========
+```
+import { Timestamp } from "firebase/firestore";
+import { z } from "zod";
+
+export const zodFirebaseTimestamp = z
+  .string()
+  .or(z.date())
+  .or(z.custom<Timestamp>())
+  .transform((value) => {
+    if (typeof value === "object" && "seconds" in value) {
+      return value.toDate();
+    }
+
+    return new Date(value);
+  });
+```
+
+========= [./lib/users/utils.ts] ===========
+```
+import type { User } from "@clerk/astro/server";
+
+export const displayUser = (user: User, withEmail: boolean = true): string => {
+  const emailAddon = withEmail ? ` (${user.emailAddresses[0].emailAddress})` : "";
+  const userEmail = user.emailAddresses[0].emailAddress;
+  if (user.fullName) return `${user.fullName}${emailAddon}`;
+  if (user.username) return `${user.username}${emailAddon}`;
+  if (user.firstName) return `${user.firstName}${emailAddon}`;
+
+  if (userEmail) return userEmail;
+  return "Unknown user (no name)";
+};
+```
+
+========= [./lib/users/types.ts] ===========
+```
+import type { User } from "@clerk/astro/server";
+
+export interface UserSelecter {
+  selectUser(): Promise<User>;
+}
+
+export class MockUserSelecter implements UserSelecter {
+  public constructor(private mockUser: User) {}
+
+  async selectUser(): Promise<User> {
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    return this.mockUser;
+  }
+}
+```
+
+========= [./layouts/BaseLayout.astro] ===========
+```
+---
+import { ModeWatcher } from "mode-watcher";
+import Header from "@components/Header.astro";
+import { Toaster } from "@components/ui/sonner";
+import "$lib/styles/app.css";
+---
+
+<script is:inline>
+  const isBrowser = typeof localStorage !== "undefined";
+  const getThemePreference = () => {
+    if (isBrowser && localStorage.getItem("theme")) {
+      return localStorage.getItem("theme");
+    }
+    return window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+  };
+  const isDark = getThemePreference() === "dark";
+  document.documentElement.classList[isDark ? "add" : "remove"]("dark");
+
+  if (isBrowser) {
+    const observer = new MutationObserver(() => {
+      const isDark = document.documentElement.classList.contains("dark");
+      localStorage.setItem("theme", isDark ? "dark" : "light");
+    });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+  }
+</script>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.png" />
+    <meta name="generator" content={Astro.generator} />
+  </head>
+  <body class="min-h-screen">
+    <Header />
+    <Toaster client:idle />
+
+    <div class="mx-auto max-w-screen-md">
+      <main class="container mx-auto">
+        <slot />
+      </main>
+    </div>
+
+    <ModeWatcher client:load />
+  </body>
+</html>
+```
+
+========= [./output.txt] ===========
+```
+```
+

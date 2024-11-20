@@ -54,4 +54,14 @@ export const grantUserExperience = async (
     ];
     await userDoc.set({ xp: amount, history });
   }
+
+  // add to global xp, written at experience/cumulative
+  const cumulativeDoc = experienceCollection.doc("cumulative");
+  const cumulativeDocSnapshot = await cumulativeDoc.get();
+  const cumulativeDocData = cumulativeDocSnapshot.data();
+  if (!cumulativeDocData) {
+    await cumulativeDoc.set({ xp: amount });
+  } else {
+    await cumulativeDoc.update({ xp: cumulativeDocData.xp + amount });
+  }
 };
