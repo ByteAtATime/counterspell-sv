@@ -6,9 +6,18 @@
   export let experience: UserExperience;
   export let rank: number;
 
-  const displayNamePromise = fetch(`/api/users/${experience.id}`)
-    .then((res) => res.json())
-    .then((user) => user.displayName);
+  let displayNamePromise: Promise<string>;
+
+  const updateDisplayName = () => {
+    displayNamePromise = fetch(`/api/users/${experience.id}`)
+      .then((res) => res.json())
+      .then((user) => user.displayName);
+  };
+
+  $: {
+    rank;
+    updateDisplayName();
+  }
 </script>
 
 <Popover.Root>

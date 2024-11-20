@@ -42,7 +42,7 @@
   <p>Loading...</p>
 {:else}
   <div class="flex flex-col gap-2">
-    {#each experiences as experience, i}
+    {#each experiences as experience, i (experience.id)}
       <XpLeaderboardUser {experience} rank={i + 1} />
     {/each}
   </div>
