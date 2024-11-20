@@ -36,7 +36,7 @@ export const GET: APIRoute = async (context) => {
       displayName: displayUser(user, false),
       avatar: user.imageUrl,
       xp: await getUserExperience(userId),
-      prizes: prizeIds.map((prizeId) => prizes.find((prize: {id: string}) => prize.id === prizeId)),
+      prizes: prizeIds?.map((prizeId) => prizes.find((prize: {id: string}) => prize.id === prizeId)) ?? [],
       attendedEvents
     }
 

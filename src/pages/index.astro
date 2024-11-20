@@ -2,12 +2,34 @@
 import BaseLayout from "@layouts/BaseLayout.astro";
 import XPLeaderboard from "@components/XPLeaderboard.svelte";
 import AddXPModal from "@components/AddXPModal.svelte";
+import { clerkClient } from "@clerk/astro/server";
+import { generateFoodId } from "@lib/users/utils";
+import { displayUser } from "../lib/users/utils";
 
 const currentUser = await Astro.locals.currentUser();
+
+let foodId = currentUser ? generateFoodId(currentUser) : null;
+
+if (currentUser && !currentUser.publicMetadata.foodId) {
+  const client = clerkClient(Astro);
+  await client.users.updateUserMetadata(currentUser.id, {
+    publicMetadata: {
+      foodId,
+    }
+  });
+}
 ---
 
 <BaseLayout>
   {currentUser && <AddXPModal mockUser={currentUser} client:idle />}
+
+  {currentUser && (
+    <div class="text-center">
+      <h1 class="text-3xl font-bold">Welcome, {displayUser(currentUser, false)}!</h1>
+      <p class="text-lg">Your food ID is: {foodId}</p>
+      <a href={`/users/${currentUser.id}`} class="text-blue-500 hover:underline">View profile</a>
+    </div>
+  )}
 
   <div class="h-4"></div>
 
