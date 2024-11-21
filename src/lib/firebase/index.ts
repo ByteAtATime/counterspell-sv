@@ -7,12 +7,12 @@ import { getFirestore } from "firebase/firestore";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyDovTu77F0_sI2Z3zp6kwpzIx5_9snsUME",
-  authDomain: "counterspell-sv.firebaseapp.com",
-  projectId: "counterspell-sv",
-  storageBucket: "counterspell-sv.appspot.com",
-  messagingSenderId: "888228905363",
-  appId: "1:888228905363:web:71acfa5cca55b397d6e866",
+  apiKey: "AIzaSyB8XzVe7f1yxQMCuvvruJp01120I6SIaXI",
+  authDomain: "counterspell-sv-backup.firebaseapp.com",
+  projectId: "counterspell-sv-backup",
+  storageBucket: "counterspell-sv-backup.firebasestorage.app",
+  messagingSenderId: "789922174346",
+  appId: "1:789922174346:web:f9887ff798b21fe25be473"
 };
 
 // Initialize Firebase

@@ -52,7 +52,6 @@
 {#if !experiences}
   <p>Loading...</p>
 {:else}
-
   <h2 class="font-semibold text-xl">Leaderboard</h2>
 
   {#if cumulativeXp !== null}
