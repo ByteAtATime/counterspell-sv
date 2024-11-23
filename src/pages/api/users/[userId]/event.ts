@@ -1,6 +1,10 @@
 import type { APIRoute } from "astro";
 import { clerkClient } from "@clerk/astro/server";
 import { userMetadataSchema } from "@lib/firebase/types.ts";
+import { firestore } from "@lib/firebase";
+import { getEvent } from "@lib/firebase/events";
+import { grantUserExperience } from "$lib/lib/firebase/xp";
+import { displayUser } from "$lib/lib/users/utils";
 
 export const GET: APIRoute = async (context) => {
   const { userId } = context.params;
@@ -59,7 +63,15 @@ export const POST: APIRoute = async (context) => {
       ...metadata,
       eventsAttended: [...metadata.eventsAttended, eventId],
     }
-  })
+  });
+
+  const event = await getEvent(eventId);
+
+  if (!event) {
+    return new Response("Event not found", { status: 404 });
+  }
+
+  await grantUserExperience(userId, displayUser(user), event.xp, `Attended event: ${event.name}`);
 
   return new Response(JSON.stringify({ success: true }), { status: 200 });
 }

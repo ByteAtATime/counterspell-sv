@@ -24,6 +24,7 @@ export type UserMetadata = z.infer<typeof userMetadataSchema>;
 export const eventSchema = z.object({
   id: z.string(),
   name: z.string(),
+  xp: z.number().default(0),
 })
 export type Event = z.infer<typeof eventSchema>;
 
