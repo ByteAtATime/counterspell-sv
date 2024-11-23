@@ -28,22 +28,13 @@
       limit(10)
     );
     // read once, no snapshot
-    getDocs(experiencesQuery).then(() => {
-      // snapshot listener
-      onSnapshot(experiencesQuery, {
-        next: (querySnapshot) => {
-          experiences = querySnapshot.docs.map((doc) => {
-            if (doc.id === "cumulative") return null;
-
-            const data = doc.data();
-
-            return userExperienceSchema.parse({
-              id: doc.id,
-              xp: data.xp,
-              history: data.history,
-            });
-          }).filter(x => x !== null);
-        },
+    getDocs(experiencesQuery).then(data => {
+      experiences = data.docs.map(doc => {
+        const data = doc.data();
+        return userExperienceSchema.parse({
+          id: doc.id,
+          ...data,
+        });
       });
     })
     
