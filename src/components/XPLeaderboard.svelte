@@ -26,7 +26,7 @@
     const experiencesQuery = query(
       experiencesCollection,
       orderBy("xp", "desc"),
-      limit(10)
+      limit(11)
     );
     // read once, no snapshot
     getDocs(experiencesQuery).then(data => {
