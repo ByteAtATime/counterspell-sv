@@ -8,6 +8,7 @@
     orderBy,
     limit,
     getDocs,
+    getDoc,
   } from "firebase/firestore";
   import { onMount } from "svelte";
   import XpLeaderboardUser from "./XPLeaderboardUser.svelte";
@@ -48,11 +49,11 @@
     
     const cumulativeDoc = doc(firestore, "experience/cumulative");
 
-    onSnapshot(cumulativeDoc, (doc) => {
+    getDoc(cumulativeDoc).then(doc => {
       const data = doc.data();
 
       cumulativeXp = data?.xp ?? null;
-    });
+    })
   });
 </script>
 
