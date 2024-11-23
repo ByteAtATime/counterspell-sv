@@ -4,12 +4,13 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import * as Card from "@components/ui/card"
 
 const prizes = await getAllPrizes();
+const sortedPrizes = prizes.sort((a, b) => a.cost - b.cost);
 ---
 
 <BaseLayout>
   <h1 class="font-bold text-4xl mb-4">Shop</h1>
   <div class="grid lg:grid-cols-2 gap-4">
-    {prizes.map((prize) => (
+    {sortedPrizes.map((prize) => (
       <Card.Root>
         <Card.Content class="flex items-center justify-between gap-4">
           <div>
