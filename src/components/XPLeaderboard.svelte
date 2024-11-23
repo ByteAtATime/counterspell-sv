@@ -39,7 +39,7 @@
         });
       }).filter(x => !!x);
 
-      fetch("/api/users/names")
+      fetch(`/api/users/names?userIds=${experiences.map(x => x.id).join(",")}`)
         .then(res => res.json())
         .then(data => {
           usernames = data;
