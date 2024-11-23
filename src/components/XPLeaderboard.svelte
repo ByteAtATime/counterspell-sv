@@ -7,6 +7,7 @@
     query,
     orderBy,
     limit,
+    getDocs,
   } from "firebase/firestore";
   import { onMount } from "svelte";
   import XpLeaderboardUser from "./XPLeaderboardUser.svelte";
@@ -19,26 +20,32 @@
   let cumulativeXp: number | null = null;
 
   onMount(() => {
-    const experienceCollection = query(
-      collection(firestore, "experience"),
+    const experiencesCollection = collection(firestore, "experience");
+    const experiencesQuery = query(
+      experiencesCollection,
       orderBy("xp", "desc"),
-      limit(10),
+      limit(10)
     );
+    // read once, no snapshot
+    getDocs(experiencesQuery).then(() => {
+      // snapshot listener
+      onSnapshot(experiencesQuery, {
+        next: (querySnapshot) => {
+          experiences = querySnapshot.docs.map((doc) => {
+            if (doc.id === "cumulative") return null;
 
-    onSnapshot(experienceCollection, (querySnapshot) => {
-      experiences = querySnapshot.docs.map((doc) => {
-        if (doc.id === "cumulative") return null;
+            const data = doc.data();
 
-        const data = doc.data();
-
-        return userExperienceSchema.parse({
-          id: doc.id,
-          xp: data.xp,
-          history: data.history,
-        });
-      }).filter(x => x !== null);
-    });
-
+            return userExperienceSchema.parse({
+              id: doc.id,
+              xp: data.xp,
+              history: data.history,
+            });
+          }).filter(x => x !== null);
+        },
+      });
+    })
+    
     const cumulativeDoc = doc(firestore, "experience/cumulative");
 
     onSnapshot(cumulativeDoc, (doc) => {
