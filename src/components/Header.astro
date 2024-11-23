@@ -11,7 +11,7 @@ import { ShoppingCart } from "lucide-svelte";
 ---
 
 <header>
-  <nav class="flex px-4 py-2">
+  <nav class="flex px-4 py-2 gap-4">
     <SignedOut>
       <SignInButton mode="modal" asChild={true}>
         <Button>Sign In!</Button>
@@ -24,7 +24,7 @@ import { ShoppingCart } from "lucide-svelte";
 
     <div class="grow"></div>
 
-    <Button href="/shop">
+    <Button href="/shop" size="icon">
       <ShoppingCart />
     </Button>
 
