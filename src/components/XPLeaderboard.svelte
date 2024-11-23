@@ -30,12 +30,13 @@
     // read once, no snapshot
     getDocs(experiencesQuery).then(data => {
       experiences = data.docs.map(doc => {
+        if (doc.id === "cumulative") return null;
         const data = doc.data();
         return userExperienceSchema.parse({
           id: doc.id,
           ...data,
         });
-      });
+      }).filter(x => !!x);
     })
     
     const cumulativeDoc = doc(firestore, "experience/cumulative");
