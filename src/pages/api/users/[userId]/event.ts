@@ -71,7 +71,7 @@ export const POST: APIRoute = async (context) => {
     return new Response("Event not found", { status: 404 });
   }
 
-  await grantUserExperience(userId, displayUser(user), event.xp, `Attended event: ${event.name}`);
+  await grantUserExperience(userId, displayUser(sender), event.xp, `Attended event: ${event.name}`);
 
   return new Response(JSON.stringify({ success: true }), { status: 200 });
 }
