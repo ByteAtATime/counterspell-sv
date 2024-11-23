@@ -15,11 +15,11 @@
 
   let open = false;
 
-  let selectedUser: User | null = null;
+  let selectedUser: { id: string; displayName: string } | null = null;
   let xpToGrant: number | null = null;
   let reason: string | null = null;
 
-  const onUserSelected = (user: User) => {
+  const onUserSelected = (user: { id: string; displayName: string }) => {
     selectedUser = user;
   };
 
@@ -52,7 +52,7 @@
 </script>
 
 {#if isAdmin}
-  <Dialog.Root bind:open>
+  <Dialog.Root bind:open onOpenChange={() => selectedUser = null}>
     <Dialog.Trigger asChild let:builder>
       <Button builders={[builder]}>Grant XP</Button>
     </Dialog.Trigger>
@@ -62,7 +62,7 @@
 
         <SelectUser {mockUser} {onUserSelected} />
       {:else}
-        <Dialog.Title>Granting XP to {displayUser(selectedUser)}</Dialog.Title>
+        <Dialog.Title>Granting XP to {selectedUser.displayName}</Dialog.Title>
 
         <form class="grid gap-4 py-4" on:submit|preventDefault={handleSubmit}>
           <div class="grid grid-cols-4 items-center gap-4">
