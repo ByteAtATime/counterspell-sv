@@ -50,4 +50,4 @@ export const POST: APIRoute = async (context) => {
       "content-type": "application/json",
     },
   });
-}
+};

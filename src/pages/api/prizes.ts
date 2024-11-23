@@ -9,4 +9,4 @@ export const GET: APIRoute = async (context) => {
       "content-type": "application/json",
     },
   });
-}
+};

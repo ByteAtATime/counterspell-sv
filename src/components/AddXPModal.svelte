@@ -52,7 +52,7 @@
 </script>
 
 {#if isAdmin}
-  <Dialog.Root bind:open onOpenChange={() => selectedUser = null}>
+  <Dialog.Root bind:open onOpenChange={() => (selectedUser = null)}>
     <Dialog.Trigger asChild let:builder>
       <Button builders={[builder]}>Grant XP</Button>
     </Dialog.Trigger>

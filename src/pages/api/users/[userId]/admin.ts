@@ -23,8 +23,8 @@ export const GET: APIRoute = async (context) => {
     );
   }
 
-  const client = clerkClient(context)
-  const requestUser = await client.users.getUser(userId)
+  const client = clerkClient(context);
+  const requestUser = await client.users.getUser(userId);
 
   const userData = {
     xp: await getUserExperience(userId),
@@ -32,4 +32,4 @@ export const GET: APIRoute = async (context) => {
   };
 
   return new Response(JSON.stringify(userData), { status: 200 });
-}
+};

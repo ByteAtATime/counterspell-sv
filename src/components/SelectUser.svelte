@@ -1,17 +1,20 @@
 <script lang="ts">
   import type { User } from "@clerk/astro/server";
-    import {Input} from "./ui/input";
-    import {Button} from "./ui/button";
-    import { displayUser } from "$lib/lib/users/utils";
+  import { Input } from "./ui/input";
+  import { Button } from "./ui/button";
+  import { displayUser } from "$lib/lib/users/utils";
 
   export let mockUser: User;
-  export let onUserSelected: (user: { id: string; displayName: string }) => void;
+  export let onUserSelected: (user: {
+    id: string;
+    displayName: string;
+  }) => void;
 
   let searchQuery = "";
 
-  const allUsersPromise = fetch("/api/users").then(res => res.json());
+  const allUsersPromise = fetch("/api/users").then((res) => res.json());
 
-  allUsersPromise.then(data => {
+  allUsersPromise.then((data) => {
     console.log(data);
   });
 </script>
@@ -21,7 +24,7 @@
 
   <Input placeholder="Search for a user" bind:value={searchQuery} />
 
-  <div class="flex flex-col gap-2 mt-2 w-full max-h-[50vh] overflow-auto">
+  <div class="mt-2 flex max-h-[50vh] w-full flex-col gap-2 overflow-auto">
     {#await allUsersPromise}
       <p>Loading...</p>
     {:then users}
@@ -30,7 +33,8 @@
       {:else}
         {#each users as user}
           <Button
-            on:click={() => onUserSelected({ id: user.id, displayName: user.displayName })}
+            on:click={() =>
+              onUserSelected({ id: user.id, displayName: user.displayName })}
             variant="outline"
           >
             {user.displayName}

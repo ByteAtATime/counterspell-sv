@@ -5,7 +5,7 @@
 
   export let experience: UserExperience;
   export let rank: number;
-  export let username: string|undefined = undefined;
+  export let username: string | undefined = undefined;
 </script>
 
 <Popover.Root>

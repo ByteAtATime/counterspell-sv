@@ -10,12 +10,21 @@ const currentUser = await Astro.locals.currentUser();
 <BaseLayout>
   {currentUser && <AddXPModal mockUser={currentUser} client:idle />}
 
-  {currentUser && (
-    <div class="text-center">
-      <h1 class="text-3xl font-bold">Welcome, {displayUser(currentUser, false)}!</h1>
-      <a href={`/users/${currentUser.id}`} class="text-blue-500 hover:underline">View profile</a>
-    </div>
-  )}
+  {
+    currentUser && (
+      <div class="text-center">
+        <h1 class="text-3xl font-bold">
+          Welcome, {displayUser(currentUser, false)}!
+        </h1>
+        <a
+          href={`/users/${currentUser.id}`}
+          class="text-blue-500 hover:underline"
+        >
+          View profile
+        </a>
+      </div>
+    )
+  }
 
   <div class="h-4"></div>
 

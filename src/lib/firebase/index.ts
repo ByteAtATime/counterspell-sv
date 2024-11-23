@@ -12,7 +12,7 @@ const firebaseConfig = {
   projectId: "counterspell-sv",
   storageBucket: "counterspell-sv.firebasestorage.app",
   messagingSenderId: "888228905363",
-  appId: "1:888228905363:web:71acfa5cca55b397d6e866"
+  appId: "1:888228905363:web:71acfa5cca55b397d6e866",
 };
 
 // Initialize Firebase

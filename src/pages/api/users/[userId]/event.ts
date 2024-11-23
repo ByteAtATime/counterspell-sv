@@ -22,14 +22,16 @@ export const GET: APIRoute = async (context) => {
     return new Response("User not found", { status: 404 });
   }
 
-  const hasAttended = userMetadataSchema.parse(user.publicMetadata).eventsAttended.includes(eventId);
+  const hasAttended = userMetadataSchema
+    .parse(user.publicMetadata)
+    .eventsAttended.includes(eventId);
 
   return new Response(JSON.stringify({ hasAttended }), {
     headers: {
       "content-type": "application/json",
     },
   });
-}
+};
 
 export const POST: APIRoute = async (context) => {
   const sender = await context.locals.currentUser();
@@ -62,7 +64,7 @@ export const POST: APIRoute = async (context) => {
     publicMetadata: {
       ...metadata,
       eventsAttended: [...metadata.eventsAttended, eventId],
-    }
+    },
   });
 
   const event = await getEvent(eventId);
@@ -71,7 +73,12 @@ export const POST: APIRoute = async (context) => {
     return new Response("Event not found", { status: 404 });
   }
 
-  await grantUserExperience(userId, displayUser(sender), event.xp, `Attended event: ${event.name}`);
+  await grantUserExperience(
+    userId,
+    displayUser(sender),
+    event.xp,
+    `Attended event: ${event.name}`,
+  );
 
   return new Response(JSON.stringify({ success: true }), { status: 200 });
-}
+};

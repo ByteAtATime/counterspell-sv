@@ -1,31 +1,39 @@
 ---
 import { getAllPrizes } from "@lib/firebase/prizes";
 import BaseLayout from "../layouts/BaseLayout.astro";
-import * as Card from "@components/ui/card"
+import * as Card from "@components/ui/card";
 
 const prizes = await getAllPrizes();
 const sortedPrizes = prizes.sort((a, b) => a.cost - b.cost);
 ---
 
 <BaseLayout>
-  <h1 class="font-bold text-4xl mb-4">Shop</h1>
-  <div class="grid lg:grid-cols-2 gap-4">
-    {sortedPrizes.map((prize) => (
-      <Card.Root>
-        <Card.Content class="flex items-center justify-between gap-4">
-          <div>
-            <div class="flex flex-col space-y-1.5 mb-4">
-              <Card.Title>{prize.name}</Card.Title>
-              <Card.Description>{prize.description}</Card.Description>
+  <h1 class="mb-4 text-4xl font-bold">Shop</h1>
+  <div class="grid gap-4 lg:grid-cols-2">
+    {
+      sortedPrizes.map((prize) => (
+        <Card.Root>
+          <Card.Content class="flex items-center justify-between gap-4">
+            <div>
+              <div class="mb-4 flex flex-col space-y-1.5">
+                <Card.Title>{prize.name}</Card.Title>
+                <Card.Description>{prize.description}</Card.Description>
+              </div>
+
+              <p>Costs {prize.cost} XP</p>
+              <p class="text-sm text-muted-foreground">
+                <span class="text-foreground">{prize.stock}</span> left in stock
+              </p>
             </div>
 
-            <p>Costs {prize.cost} XP</p>
-            <p class="text-muted-foreground text-sm"><span class="text-foreground">{prize.stock}</span> left in stock</p>
-          </div>
-
-          <img src={prize.imageUrl} alt={prize.name} class="max-h-20 max-w-20 object-contain" />
-        </Card.Content>
-      </Card.Root>
-    ))}
+            <img
+              src={prize.imageUrl}
+              alt={prize.name}
+              class="max-h-20 max-w-20 object-contain"
+            />
+          </Card.Content>
+        </Card.Root>
+      ))
+    }
   </div>
 </BaseLayout>

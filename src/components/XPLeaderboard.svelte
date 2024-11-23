@@ -26,48 +26,56 @@
     const experiencesQuery = query(
       experiencesCollection,
       orderBy("xp", "desc"),
-      limit(11)
+      limit(11),
     );
     // read once, no snapshot
-    getDocs(experiencesQuery).then(data => {
-      experiences = data.docs.map(doc => {
-        if (doc.id === "cumulative") return null;
-        const data = doc.data();
-        return userExperienceSchema.parse({
-          id: doc.id,
-          ...data,
-        });
-      }).filter(x => !!x);
+    getDocs(experiencesQuery).then((data) => {
+      experiences = data.docs
+        .map((doc) => {
+          if (doc.id === "cumulative") return null;
+          const data = doc.data();
+          return userExperienceSchema.parse({
+            id: doc.id,
+            ...data,
+          });
+        })
+        .filter((x) => !!x);
 
-      fetch(`/api/users/names?userIds=${experiences.map(x => x.id).join(",")}`)
-        .then(res => res.json())
-        .then(data => {
+      fetch(
+        `/api/users/names?userIds=${experiences.map((x) => x.id).join(",")}`,
+      )
+        .then((res) => res.json())
+        .then((data) => {
           usernames = data;
         });
-    })
-    
+    });
+
     const cumulativeDoc = doc(firestore, "experience/cumulative");
 
-    getDoc(cumulativeDoc).then(doc => {
+    getDoc(cumulativeDoc).then((doc) => {
       const data = doc.data();
 
       cumulativeXp = data?.xp ?? null;
-    })
+    });
   });
 </script>
 
 {#if !experiences}
   <p>Loading...</p>
 {:else}
-  <h2 class="font-semibold text-xl">Leaderboard</h2>
+  <h2 class="text-xl font-semibold">Leaderboard</h2>
 
   {#if cumulativeXp !== null}
-    <p class="text-muted-foreground mb-2">Global XP Total: {cumulativeXp}</p>
+    <p class="mb-2 text-muted-foreground">Global XP Total: {cumulativeXp}</p>
   {/if}
 
   <div class="flex flex-col gap-2">
     {#each experiences as experience, i (experience.id)}
-      <XpLeaderboardUser {experience} rank={i + 1} username={usernames[experience.id]} />
+      <XpLeaderboardUser
+        {experience}
+        rank={i + 1}
+        username={usernames[experience.id]}
+      />
     {/each}
   </div>
 {/if}

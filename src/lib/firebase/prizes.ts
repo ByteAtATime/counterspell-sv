@@ -1,12 +1,14 @@
 import { firestore } from "@lib/firebase/server.ts";
 import { prizeSchema } from "@lib/firebase/types.ts";
 
-const prizesCollection = firestore.collection('prizes');
+const prizesCollection = firestore.collection("prizes");
 
 export const getAllPrizes = async () => {
   const snapshot = await prizesCollection.get();
-  return snapshot.docs.map((doc) => prizeSchema.parse({ ...doc.data(), id: doc.id }));
-}
+  return snapshot.docs.map((doc) =>
+    prizeSchema.parse({ ...doc.data(), id: doc.id }),
+  );
+};
 
 export const buyPrize = async (prizeId: string, userId: string) => {
   const prize = await prizesCollection.doc(prizeId).get();
@@ -20,7 +22,7 @@ export const buyPrize = async (prizeId: string, userId: string) => {
     throw new Error("Prize out of stock");
   }
 
-  const user = await firestore.collection('experience').doc(userId).get();
+  const user = await firestore.collection("experience").doc(userId).get();
   const userData = user.data();
   if (!user.exists || !userData) {
     throw new Error("User not found");
@@ -31,9 +33,13 @@ export const buyPrize = async (prizeId: string, userId: string) => {
   }
 
   await firestore.runTransaction(async (transaction) => {
-    transaction.update(prizesCollection.doc(prizeId), { stock: prizeData.stock - 1 });
-    transaction.update(firestore.collection('experience').doc(userId), { xp: userData.xp - prizeData.cost });
-    transaction.update(firestore.collection('experience').doc(userId), {
+    transaction.update(prizesCollection.doc(prizeId), {
+      stock: prizeData.stock - 1,
+    });
+    transaction.update(firestore.collection("experience").doc(userId), {
+      xp: userData.xp - prizeData.cost,
+    });
+    transaction.update(firestore.collection("experience").doc(userId), {
       history: [
         ...userData.history,
         {
@@ -44,4 +50,4 @@ export const buyPrize = async (prizeId: string, userId: string) => {
       ],
     });
   });
-}
+};

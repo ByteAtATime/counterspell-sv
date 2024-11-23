@@ -21,26 +21,33 @@ export const GET: APIRoute = async (context) => {
 
   if (user.publicMetadata.isAdmin || userId === user.id) {
     const allEvents = await getAllEvents();
-    const eventsAttended = userMetadataSchema.parse(user.publicMetadata).eventsAttended;
+    const eventsAttended = userMetadataSchema.parse(
+      user.publicMetadata,
+    ).eventsAttended;
 
     const attendedEvents = allEvents.map((event) => {
       return {
         ...event,
-        attended: eventsAttended.includes(event.id)
-      }
-    })
+        attended: eventsAttended.includes(event.id),
+      };
+    });
 
     const prizeIds: string[] = user.publicMetadata.prizesRedeemed as string[];
 
-    const prizes = await Promise.resolve(GET_prizes(context)).then((res) => res.json());
+    const prizes = await Promise.resolve(GET_prizes(context)).then((res) =>
+      res.json(),
+    );
 
     const response = {
       displayName: displayUser(user, false),
       avatar: user.imageUrl,
       xp: await getUserExperience(userId),
-      prizes: prizeIds?.map((prizeId) => prizes.find((prize: {id: string}) => prize.id === prizeId)) ?? [],
-      attendedEvents
-    }
+      prizes:
+        prizeIds?.map((prizeId) =>
+          prizes.find((prize: { id: string }) => prize.id === prizeId),
+        ) ?? [],
+      attendedEvents,
+    };
 
     return new Response(JSON.stringify(response), { status: 200 });
   }

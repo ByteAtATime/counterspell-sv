@@ -6,32 +6,48 @@ import { GET as GET_userData } from "../api/users/[userId]";
 import { GET as GET_prizes } from "../api/prizes";
 
 const user = await Astro.locals.currentUser();
-if (!user || (user.id !== Astro.params.userId && !user.publicMetadata.isAdmin)) {
-  Astro.redirect('/users/unauthorized');
+if (
+  !user ||
+  (user.id !== Astro.params.userId && !user.publicMetadata.isAdmin)
+) {
+  Astro.redirect("/users/unauthorized");
 }
 
 let userPrizes: (Prize & { count: number })[] = [];
-let userData: { displayName: string, avatar: string, xp: UserExperience, prizes: string[] }|null = null;
+let userData: {
+  displayName: string;
+  avatar: string;
+  xp: UserExperience;
+  prizes: string[];
+} | null = null;
 
 try {
-  userData = await Promise.resolve(GET_userData(Astro)).then((res) => res.json());
-  const prizes = await Promise.resolve(GET_prizes(Astro)).then((res) => res.json());
+  userData = await Promise.resolve(GET_userData(Astro)).then((res) =>
+    res.json(),
+  );
+  const prizes = await Promise.resolve(GET_prizes(Astro)).then((res) =>
+    res.json(),
+  );
 
-  userPrizes = userData?.prizes.reduce((acc: any[], prizeId: string) => {
-    const prize = prizes.find((p: { id: string }) => p.id === prizeId);
-    const existingPrize = acc.find((p) => p.id === prizeId);
+  userPrizes =
+    userData?.prizes.reduce((acc: any[], prizeId: string) => {
+      const prize = prizes.find((p: { id: string }) => p.id === prizeId);
+      const existingPrize = acc.find((p) => p.id === prizeId);
 
-    if (existingPrize) {
-      existingPrize.count++;
-    } else if (prize) {
-      acc.push({ ...prize, count: 1 });
-    }
+      if (existingPrize) {
+        existingPrize.count++;
+      } else if (prize) {
+        acc.push({ ...prize, count: 1 });
+      }
 
-    return acc;
-  }, []) ?? [];
+      return acc;
+    }, []) ?? [];
 } catch (error) {
-  console.error(error)
-  return new Response("An error occurred while fetching user data. Does this user exist?", { status: 500 });
+  console.error(error);
+  return new Response(
+    "An error occurred while fetching user data. Does this user exist?",
+    { status: 500 },
+  );
 }
 
 if (!userData) {
@@ -40,74 +56,91 @@ if (!userData) {
 ---
 
 <BaseLayout>
-  <div class="flex flex-col text-center md:flex-row md:text-left items-center gap-4">
-    <img src={userData.avatar} alt={userData.displayName} class="rounded-full w-24 h-24" />
+  <div
+    class="flex flex-col items-center gap-4 text-center md:flex-row md:text-left"
+  >
+    <img
+      src={userData.avatar}
+      alt={userData.displayName}
+      class="h-24 w-24 rounded-full"
+    />
 
     <div>
-      <h1 class="font-bold text-3xl">{userData.displayName}</h1>
-      <p class="text-muted-foreground">{userData.xp ? `XP: ${userData.xp.xp}` : "XP: 0 (start earning some!)"}</p>
+      <h1 class="text-3xl font-bold">{userData.displayName}</h1>
+      <p class="text-muted-foreground">
+        {userData.xp ? `XP: ${userData.xp.xp}` : "XP: 0 (start earning some!)"}
+      </p>
     </div>
   </div>
 
-  <h2 class="text-2xl font-bold mt-8">Prizes</h2>
+  <h2 class="mt-8 text-2xl font-bold">Prizes</h2>
 
-  <ul class="list-disc list-inside">
-    {userPrizes.map((prize) => (
-      <div
-        class="flex items-center p-3 bg-blue-50/80 dark:bg-slate-800/50 rounded-lg"
-      >
-        <div class="p-2 rounded-full bg-blue-100 dark:bg-slate-700 mr-3">
-          <ShoppingBag class="w-4 h-4 text-blue-600 dark:text-blue-400" />
-        </div>
-        <div class="flex-grow flex items-center justify-between">
-          <div class="text-sm font-medium text-gray-800 dark:text-gray-200">
-            {prize.name}
+  <ul class="list-inside list-disc">
+    {
+      userPrizes.map((prize) => (
+        <div class="flex items-center rounded-lg bg-blue-50/80 p-3 dark:bg-slate-800/50">
+          <div class="mr-3 rounded-full bg-blue-100 p-2 dark:bg-slate-700">
+            <ShoppingBag class="h-4 w-4 text-blue-600 dark:text-blue-400" />
           </div>
-          <div class="text-sm font-medium text-blue-600 dark:text-blue-400 ml-2">
-            {prize.count}x
+          <div class="flex flex-grow items-center justify-between">
+            <div class="text-sm font-medium text-gray-800 dark:text-gray-200">
+              {prize.name}
+            </div>
+            <div class="ml-2 text-sm font-medium text-blue-600 dark:text-blue-400">
+              {prize.count}x
+            </div>
           </div>
         </div>
-      </div>
-    ))}
+      ))
+    }
   </ul>
 
-  <h2 class="text-2xl font-bold mt-8 mb-2">XP History</h2>
+  <h2 class="mb-2 mt-8 text-2xl font-bold">XP History</h2>
 
-  {userData.xp && userData.xp.history.length > 0 ? (
-    <div class="flex flex-col gap-2">
-      {userData.xp.history.map((entry) => (
-        <div
-          class={`flex items-center p-3 rounded-lg ${
-            entry.xp > 0
-              ? 'bg-green-100/80 dark:bg-green-900/30'
-              : 'bg-red-50/80 dark:bg-red-900/20'
-          }`}
-        >
-          <div class={`p-2 rounded-full mr-3 ${
-            entry.xp > 0
-              ? 'bg-green-200 dark:bg-green-800/50'
-              : 'bg-red-100 dark:bg-red-800/50'
-          }`}>
-            {entry.xp > 0 ? (
-              <Plus class="w-4 h-4 text-green-600 dark:text-green-400" />
-            ) : (
-              <Minus class="w-4 h-4 text-red-600 dark:text-red-400" />
-            )}
+  {
+    userData.xp && userData.xp.history.length > 0 ? (
+      <div class="flex flex-col gap-2">
+        {userData.xp.history.map((entry) => (
+          <div
+            class={`flex items-center rounded-lg p-3 ${
+              entry.xp > 0
+                ? "bg-green-100/80 dark:bg-green-900/30"
+                : "bg-red-50/80 dark:bg-red-900/20"
+            }`}
+          >
+            <div
+              class={`mr-3 rounded-full p-2 ${
+                entry.xp > 0
+                  ? "bg-green-200 dark:bg-green-800/50"
+                  : "bg-red-100 dark:bg-red-800/50"
+              }`}
+            >
+              {entry.xp > 0 ? (
+                <Plus class="h-4 w-4 text-green-600 dark:text-green-400" />
+              ) : (
+                <Minus class="h-4 w-4 text-red-600 dark:text-red-400" />
+              )}
+            </div>
+            <div class="flex-grow">
+              <div class="text-sm text-gray-600 dark:text-gray-300">
+                {entry.reason}
+              </div>
+            </div>
+            <div
+              class={`whitespace-nowrap font-mono font-medium ${
+                entry.xp > 0
+                  ? "text-green-600 dark:text-green-400"
+                  : "text-red-600 dark:text-red-400"
+              }`}
+            >
+              {entry.xp > 0 ? "+" : ""}
+              {entry.xp} XP
+            </div>
           </div>
-          <div class="flex-grow">
-            <div class="text-sm text-gray-600 dark:text-gray-300">{entry.reason}</div>
-          </div>
-          <div class={`font-mono font-medium whitespace-nowrap ${
-            entry.xp > 0
-              ? 'text-green-600 dark:text-green-400'
-              : 'text-red-600 dark:text-red-400'
-          }`}>
-            {entry.xp > 0 ? '+' : ''}{entry.xp} XP
-          </div>
-        </div>
-      ))}
-    </div>
-  ) : (
-    <p class="text-muted-foreground dark:text-gray-400">No XP history yet</p>
-  )}
+        ))}
+      </div>
+    ) : (
+      <p class="text-muted-foreground dark:text-gray-400">No XP history yet</p>
+    )
+  }
 </BaseLayout>

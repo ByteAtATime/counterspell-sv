@@ -18,14 +18,14 @@ export const userMetadataSchema = z.object({
   eventsAttended: z.array(z.string()).default([]),
   prizesRedeemed: z.array(z.string()).default([]),
   isAdmin: z.boolean().default(false),
-})
+});
 export type UserMetadata = z.infer<typeof userMetadataSchema>;
 
 export const eventSchema = z.object({
   id: z.string(),
   name: z.string(),
   xp: z.number().default(0),
-})
+});
 export type Event = z.infer<typeof eventSchema>;
 
 export const prizeSchema = z.object({
@@ -35,6 +35,6 @@ export const prizeSchema = z.object({
   stock: z.number(),
   imageUrl: z.string(),
   description: z.string(),
-})
+});
 
 export type Prize = z.infer<typeof prizeSchema>;

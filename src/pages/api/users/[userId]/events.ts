@@ -18,17 +18,22 @@ export const GET: APIRoute = async (context) => {
   }
 
   const allEvents = await getAllEvents();
-  const eventsAttended = userMetadataSchema.parse(user.publicMetadata).eventsAttended;
+  const eventsAttended = userMetadataSchema.parse(
+    user.publicMetadata,
+  ).eventsAttended;
 
   // return as eventId: boolean
-  const attendedEvents = allEvents.reduce<Record<string, boolean>>((acc, event) => {
-    acc[event.id] = eventsAttended.includes(event.id);
-    return acc;
-  }, {});
+  const attendedEvents = allEvents.reduce<Record<string, boolean>>(
+    (acc, event) => {
+      acc[event.id] = eventsAttended.includes(event.id);
+      return acc;
+    },
+    {},
+  );
 
   return new Response(JSON.stringify(attendedEvents), {
     headers: {
       "content-type": "application/json",
     },
   });
-}
+};

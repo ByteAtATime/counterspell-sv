@@ -18,15 +18,17 @@ export const GET: APIRoute = async (context) => {
   const client = clerkClient(context);
   const users = await client.users.getUserList({ limit: 500 });
 
-  const processedData = users.data.map(user => ({
+  const processedData = users.data.map((user) => ({
     id: user.id,
     firstName: user.firstName,
     lastName: user.lastName,
-    primaryEmail: user.emailAddresses && user.emailAddresses.length > 0 ? user.emailAddresses[0].emailAddress : null,
+    primaryEmail:
+      user.emailAddresses && user.emailAddresses.length > 0
+        ? user.emailAddresses[0].emailAddress
+        : null,
     displayName: displayUser(user),
     imageUrl: user.imageUrl,
   }));
 
-
   return new Response(JSON.stringify(processedData), { status: 200 });
-}
+};

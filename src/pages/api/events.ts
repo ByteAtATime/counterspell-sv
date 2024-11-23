@@ -12,11 +12,11 @@ export const GET: APIRoute = async (context) => {
     });
   }
 
-  const events = await getAllEvents()
+  const events = await getAllEvents();
 
   return new Response(JSON.stringify(events), {
     headers: {
       "content-type": "application/json",
     },
   });
-}
+};
