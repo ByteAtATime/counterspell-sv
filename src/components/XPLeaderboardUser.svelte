@@ -5,19 +5,7 @@
 
   export let experience: UserExperience;
   export let rank: number;
-
-  let displayNamePromise: Promise<string>;
-
-  const updateDisplayName = () => {
-    displayNamePromise = fetch(`/api/users/${experience.id}`)
-      .then((res) => res.json())
-      .then((user) => user.displayName);
-  };
-
-  $: {
-    rank;
-    updateDisplayName();
-  }
+  export let username: string|undefined = undefined;
 </script>
 
 <Popover.Root>
@@ -28,13 +16,11 @@
           {rank}
         </span>
         <span>
-          {#await displayNamePromise}
+          {#if !username}
             <span class="text-muted-foreground">Loading...</span>
-          {:then displayName}
-            <span class="font-semibold">{displayName}</span>
-          {:catch}
-            <span>Unknown User</span>
-          {/await}
+          {:else}
+            <span class="font-semibold">{username}</span>
+          {/if}
         </span>
       </div>
       <span class="font-semibold">{experience.xp} XP</span>

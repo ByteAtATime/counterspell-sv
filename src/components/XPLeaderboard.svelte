@@ -19,6 +19,7 @@
 
   let experiences: UserExperience[] | null = null;
   let cumulativeXp: number | null = null;
+  let usernames: Record<string, string> = {};
 
   onMount(() => {
     const experiencesCollection = collection(firestore, "experience");
@@ -37,6 +38,12 @@
           ...data,
         });
       }).filter(x => !!x);
+
+      fetch("/api/users/names")
+        .then(res => res.json())
+        .then(data => {
+          usernames = data;
+        });
     })
     
     const cumulativeDoc = doc(firestore, "experience/cumulative");
@@ -60,7 +67,7 @@
 
   <div class="flex flex-col gap-2">
     {#each experiences as experience, i (experience.id)}
-      <XpLeaderboardUser {experience} rank={i + 1} />
+      <XpLeaderboardUser {experience} rank={i + 1} username={usernames[experience.id]} />
     {/each}
   </div>
 {/if}
