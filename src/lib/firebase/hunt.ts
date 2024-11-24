@@ -29,20 +29,20 @@ export const getHunt = async (
 };
 
 export const claimHunt = async (id: string, userId: string): Promise<void> => {
-    const huntDoc = huntsCollection.doc(id);
-    const hunt = await huntDoc.get();
-    
-    if (!hunt.exists) {
-        throw new Error("Hunt not found");
-    }
-    
-    const { xp, isActive } = hunt.data()!;
+  const huntDoc = huntsCollection.doc(id);
+  const hunt = await huntDoc.get();
 
-    if (!isActive) {
-        throw new Error("Hunt is not active (already claimed?)");
-    }
-    
-    await grantUserExperience(userId, "Scavenger Hunt", xp, "Scavenger Hunt");
-    
-    await huntDoc.update({ isActive: false, claimedBy: userId });
-}
+  if (!hunt.exists) {
+    throw new Error("Hunt not found");
+  }
+
+  const { xp, isActive } = hunt.data()!;
+
+  if (!isActive) {
+    throw new Error("Hunt is not active (already claimed?)");
+  }
+
+  await grantUserExperience(userId, "Scavenger Hunt", xp, "Scavenger Hunt");
+
+  await huntDoc.update({ isActive: false, claimedBy: userId });
+};

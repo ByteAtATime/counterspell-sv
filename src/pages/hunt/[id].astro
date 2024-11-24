@@ -5,9 +5,9 @@ import ClaimScavengerHunt from "./ClaimScavengerHunt.svelte";
 
 const { userId } = Astro.locals.auth();
 
-const hunt = await fetch(`https://counterspellsv.xyz/api/hunts/${Astro.params.id}`).then(
-  (res) => res.json() as Promise<Hunt | undefined>,
-);
+const hunt = await fetch(
+  `https://counterspellsv.xyz/api/hunts/${Astro.params.id}`,
+).then((res) => res.json() as Promise<Hunt | undefined>);
 
 if (!hunt) {
   Astro.response.status = 404;
@@ -16,18 +16,26 @@ if (!hunt) {
 ---
 
 <BaseLayout>
-  <p>
-    Congratulations on finding this scavenger card! You get to claim <span
-      class="font-bold">{hunt?.xp} XP!</span>
-  </p>
+  <div class="flex flex-col items-center justify-center text-center absolute left-0 right-0 top-0 bottom-0">
+    {
+      hunt?.isActive ? (
+        <>
+          <p class="mb-2">
+            Congratulations on finding this scavenger card! You get to claim{" "}
+            <span class="font-bold">{hunt?.xp} XP!</span>
+          </p>
 
-  {
-    userId ? (
-      <ClaimScavengerHunt hunt={hunt} client:load />
-    ) : (
-      <p class="text-muted-foreground">
-        You must be logged in to claim this scavenger hunt.
-      </p>
-    )
-  }
+          {userId ? (
+            <ClaimScavengerHunt hunt={hunt} client:load />
+          ) : (
+            <p class="text-muted-foreground">
+              You must be logged in to claim this scavenger hunt.
+            </p>
+          )}
+        </>
+      ) : (
+        <p>This scavenger hunt is no longer active.</p>
+      )
+    }
+  </div>
 </BaseLayout>

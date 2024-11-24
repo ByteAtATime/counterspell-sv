@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Button } from "@components/ui/button";
-    import type { Hunt } from "@lib/firebase/types";
+  import type { Hunt } from "@lib/firebase/types";
 
   export let hunt: Hunt | undefined;
 
@@ -20,9 +20,9 @@
 {:else}
   <Button on:click={claim} disabled={isClaimed}>
     {#if isClaimed}
-        Claimed!
+      Claimed!
     {:else}
-        Claim!
+      Claim!
     {/if}
-    </Button>
+  </Button>
 {/if}
