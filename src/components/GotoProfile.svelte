@@ -22,7 +22,7 @@
             return;
         }
 
-        window.location.href = `/profile/${selectedUser.id}`;
+        window.location.href = `/users/${selectedUser.id}`;
         open = false;
         selectedUser = null;
     };
