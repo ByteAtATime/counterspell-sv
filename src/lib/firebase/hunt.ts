@@ -1,5 +1,6 @@
 import { firestore } from "./server";
 import type { Hunt } from "./types";
+import { grantUserExperience } from "./xp";
 
 const huntsCollection = firestore.collection("hunts");
 
@@ -35,21 +36,9 @@ export const claimHunt = async (id: string, userId: string): Promise<void> => {
         throw new Error("Hunt not found");
     }
     
-    const { xp } = hunt.data()!;
+    const { xpAmount: xp } = hunt.data()!;
     
-    const userDoc = firestore.collection("experience").doc(userId);
-    const user = await userDoc.get();
+    await grantUserExperience(userId, "Scavenger Hunt", xp, "Scavenger Hunt");
     
-    const userXp = (user.data()?.xp ?? 0) + xp;
-    const newHistory = [
-        ...user.data()?.history ?? [],
-        {
-            xp,
-            reason: "Scavenger Hunt",
-            timestamp: new Date().toISOString(),
-        },
-    ]
-    
-    await userDoc.update({ xp: userXp, history: newHistory });
     await huntDoc.update({ isActive: false, claimedBy: userId });
 }
