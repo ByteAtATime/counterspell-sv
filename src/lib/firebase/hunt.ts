@@ -37,7 +37,7 @@ export const claimHunt = async (id: string, userId: string): Promise<void> => {
     
     const { xp } = hunt.data()!;
     
-    const userDoc = firestore.collection("users").doc(userId);
+    const userDoc = firestore.collection("experience").doc(userId);
     const user = await userDoc.get();
     
     if (!user.exists) {

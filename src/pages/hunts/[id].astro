@@ -4,9 +4,8 @@ import type { Hunt } from "@lib/firebase/types";
 import ClaimScavengerHunt from "./ClaimScavengerHunt.svelte";
 
 const { userId } = Astro.locals.auth();
-console.log(new URL(`/api/hunts/${Astro.params.id}`, Astro.url).href)
 
-const hunt = await fetch(new URL(`/api/hunts/${Astro.params.id}`, Astro.url)).then(
+const hunt = await fetch(`https://counterspellsv.xyz/api/hunts/${Astro.params.id}`).then(
   (res) => res.json() as Promise<Hunt | undefined>,
 );
 
@@ -24,7 +23,7 @@ if (!hunt) {
 
   {
     userId ? (
-      <ClaimScavengerHunt hunt={hunt} />
+      <ClaimScavengerHunt hunt={hunt} client:load />
     ) : (
       <p class="text-muted-foreground">
         You must be logged in to claim this scavenger hunt.
