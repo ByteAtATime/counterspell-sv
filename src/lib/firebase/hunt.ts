@@ -40,12 +40,16 @@ export const claimHunt = async (id: string, userId: string): Promise<void> => {
     const userDoc = firestore.collection("experience").doc(userId);
     const user = await userDoc.get();
     
-    if (!user.exists) {
-        throw new Error("User not found");
-    }
+    const userXp = (user.data()?.xp ?? 0) + xp;
+    const newHistory = [
+        ...user.data()?.history ?? [],
+        {
+            amount: xp,
+            reason: "Scavenger Hunt",
+            timestamp: new Date().toISOString(),
+        },
+    ]
     
-    const userXp = user.data()!.xp + xp;
-    
-    await userDoc.update({ xp: userXp });
+    await userDoc.update({ xp: userXp, history: newHistory });
     await huntDoc.update({ isActive: false, claimedBy: userId });
 }
