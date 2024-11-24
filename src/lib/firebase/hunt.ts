@@ -36,7 +36,11 @@ export const claimHunt = async (id: string, userId: string): Promise<void> => {
         throw new Error("Hunt not found");
     }
     
-    const { xpAmount: xp } = hunt.data()!;
+    const { xp, isActive } = hunt.data()!;
+
+    if (!isActive) {
+        throw new Error("Hunt is not active");
+    }
     
     await grantUserExperience(userId, "Scavenger Hunt", xp, "Scavenger Hunt");
     
