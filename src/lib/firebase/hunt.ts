@@ -39,7 +39,7 @@ export const claimHunt = async (id: string, userId: string): Promise<void> => {
     const { xp, isActive } = hunt.data()!;
 
     if (!isActive) {
-        throw new Error("Hunt is not active");
+        throw new Error("Hunt is not active (already claimed?)");
     }
     
     await grantUserExperience(userId, "Scavenger Hunt", xp, "Scavenger Hunt");
