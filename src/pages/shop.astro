@@ -16,8 +16,8 @@ const sortedPrizes = prizes.sort((a, b) => {
   <div class="grid gap-4 lg:grid-cols-2">
     {
       sortedPrizes.map((prize) => (
-        <Card.Root>
-          <Card.Content class:list={["flex items-center justify-between gap-4", { "bg-red-400/20": prize.stock === 0 }]}>
+        <Card.Root class={prize.stock === 0 ? "bg-red-400/20" : ""}>
+          <Card.Content class="flex items-center justify-between gap-4">
             <div>
               <div class="mb-4 flex flex-col space-y-1.5">
                 <Card.Title>{prize.name}</Card.Title>
