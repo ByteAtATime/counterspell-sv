@@ -3,8 +3,8 @@ import { clerkClient } from "@clerk/astro/server";
 import { userMetadataSchema } from "@lib/firebase/types.ts";
 import { firestore } from "@lib/firebase";
 import { getEvent } from "@lib/firebase/events";
-import { grantUserExperience } from "$lib/lib/firebase/xp";
-import { displayUser } from "$lib/lib/users/utils";
+import { grantUserExperience } from "@lib/firebase/xp";
+import { displayUser } from "@lib/users/utils";
 
 export const GET: APIRoute = async (context) => {
   const { userId } = context.params;

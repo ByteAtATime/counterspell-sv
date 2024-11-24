@@ -5,7 +5,7 @@
     import SelectUser from "./SelectUser.svelte";
     import { toast } from "svelte-sonner";
     import SelectPrize from "./SelectPrize.svelte";
-    import type { Prize } from "$lib/lib/firebase/types";
+    import type { Prize } from "@lib/firebase/types";
   
     $: isAdmin = $userStore?.publicMetadata.isAdmin;
   

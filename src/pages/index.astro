@@ -3,7 +3,8 @@ import BaseLayout from "@layouts/BaseLayout.astro";
 import XPLeaderboard from "@components/XPLeaderboard.svelte";
 import AddXPModal from "@components/AddXPModal.svelte";
 import { displayUser } from "../lib/users/utils";
-import BuyPrizeModal from "$lib/components/BuyPrizeModal.svelte";
+import BuyPrizeModal from "@components/BuyPrizeModal.svelte";
+import GotoProfile from "@components/GotoProfile.svelte";
 
 const currentUser = await Astro.locals.currentUser();
 ---
@@ -14,6 +15,7 @@ const currentUser = await Astro.locals.currentUser();
       <div class="flex items-center gap-2">
         <AddXPModal mockUser={currentUser} client:idle />
         <BuyPrizeModal client:idle />
+        <GotoProfile client:idle />
       </div>
     )
   }

@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 import { createHunt } from "@lib/firebase/hunt.ts";
-import { huntSchema } from "$lib/lib/firebase/types";
+import { huntSchema } from "@lib/firebase/types";
 
 export const POST: APIRoute = async (context) => {
   const user = await context.locals.currentUser();

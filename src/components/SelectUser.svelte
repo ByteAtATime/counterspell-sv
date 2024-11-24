@@ -2,7 +2,7 @@
   import type { User } from "@clerk/astro/server";
   import { Input } from "./ui/input";
   import { Button } from "./ui/button";
-  import { displayUser } from "$lib/lib/users/utils";
+  import { displayUser } from "@lib/users/utils";
 
   export let onUserSelected: (user: {
     id: string;

@@ -1,4 +1,4 @@
-import { displayUser } from "$lib/lib/users/utils";
+import { displayUser } from "@lib/users/utils";
 import { clerkClient } from "@clerk/astro/server";
 import type { APIRoute } from "astro";
 
