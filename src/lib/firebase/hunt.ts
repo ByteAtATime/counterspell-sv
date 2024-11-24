@@ -44,7 +44,7 @@ export const claimHunt = async (id: string, userId: string): Promise<void> => {
     const newHistory = [
         ...user.data()?.history ?? [],
         {
-            amount: xp,
+            xp,
             reason: "Scavenger Hunt",
             timestamp: new Date().toISOString(),
         },
