@@ -42,6 +42,8 @@ try {
 
       return acc;
     }, []) ?? [];
+
+    console.log(userPrizes)
 } catch (error) {
   console.error(error);
   return new Response(
@@ -133,8 +135,7 @@ if (!userData) {
                   : "text-red-600 dark:text-red-400"
               }`}
             >
-              {entry.xp > 0 ? "+" : ""}
-              {entry.xp} XP
+              {entry.xp > 0 ? "+" : ""}{entry.xp} XP
             </div>
           </div>
         ))}
