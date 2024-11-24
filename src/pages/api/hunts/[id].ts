@@ -26,15 +26,3 @@ export const GET: APIRoute = async (context) => {
 
   return new Response(JSON.stringify(hunt), { status: 200 });
 };
-
-export const POST: APIRoute = async (context) => {
-  const user = await context.locals.currentUser();
-  if (!user?.publicMetadata.isAdmin) {
-    return new Response("Unauthorized", { status: 401 });
-  }
-
-  const huntData = await context.request.json();
-  const huntId = await createHunt(huntData);
-
-  return new Response(JSON.stringify({ id: huntId }), { status: 201 });
-};
