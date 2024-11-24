@@ -12,7 +12,7 @@ const currentUser = await Astro.locals.currentUser();
 <BaseLayout>
   {
     currentUser && (
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2 mb-4">
         <AddXPModal mockUser={currentUser} client:idle />
         <BuyPrizeModal client:idle />
         <GotoProfile client:idle />

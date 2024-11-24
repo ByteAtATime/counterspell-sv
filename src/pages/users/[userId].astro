@@ -29,6 +29,8 @@ try {
     res.json(),
   );
 
+  console.log(userData?.prizes)
+
   userPrizes =
     userData?.prizes.reduce((acc: any[], prizeId: string) => {
       const prize = prizes.find((p: { id: string }) => p.id === prizeId);
