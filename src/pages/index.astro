@@ -3,12 +3,20 @@ import BaseLayout from "@layouts/BaseLayout.astro";
 import XPLeaderboard from "@components/XPLeaderboard.svelte";
 import AddXPModal from "@components/AddXPModal.svelte";
 import { displayUser } from "../lib/users/utils";
+import BuyPrizeModal from "$lib/components/BuyPrizeModal.svelte";
 
 const currentUser = await Astro.locals.currentUser();
 ---
 
 <BaseLayout>
-  {currentUser && <AddXPModal mockUser={currentUser} client:idle />}
+  {
+    currentUser && (
+      <div class="flex items-center gap-2">
+        <AddXPModal mockUser={currentUser} client:idle />
+        <BuyPrizeModal client:idle />
+      </div>
+    )
+  }
 
   {
     currentUser && (

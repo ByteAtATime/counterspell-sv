@@ -4,7 +4,6 @@
   import { Button } from "./ui/button";
   import { displayUser } from "$lib/lib/users/utils";
 
-  export let mockUser: User;
   export let onUserSelected: (user: {
     id: string;
     displayName: string;
