@@ -18,34 +18,23 @@ let userData: {
   displayName: string;
   avatar: string;
   xp: UserExperience;
-  prizes: string[];
+  prizes: Prize[];
 } | null = null;
 
 try {
   userData = await Promise.resolve(GET_userData(Astro)).then((res) =>
     res.json(),
   );
-  const prizes = await Promise.resolve(GET_prizes(Astro)).then((res) =>
-    res.json(),
-  );
 
-  console.log(userData?.prizes)
-
-  userPrizes =
-    userData?.prizes.reduce((acc: any[], prizeId: string) => {
-      const prize = prizes.find((p: { id: string }) => p.id === prizeId);
-      const existingPrize = acc.find((p) => p.id === prizeId);
-
-      if (existingPrize) {
-        existingPrize.count++;
-      } else if (prize) {
-        acc.push({ ...prize, count: 1 });
-      }
-
-      return acc;
-    }, []) ?? [];
-
-    console.log(userPrizes)
+  userPrizes = userData?.prizes.reduce((acc, prize) => {
+    const existingPrize = acc.find((p) => p.id === prize.id);
+    if (existingPrize) {
+      existingPrize.count++;
+    } else {
+      acc.push({ ...prize, count: 1 });
+    }
+    return acc;
+  }, [] as (Prize & { count: number })[]) ?? [];
 } catch (error) {
   console.error(error);
   return new Response(
