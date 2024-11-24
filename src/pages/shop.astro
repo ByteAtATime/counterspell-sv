@@ -4,7 +4,11 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import * as Card from "@components/ui/card";
 
 const prizes = await getAllPrizes();
-const sortedPrizes = prizes.sort((a, b) => b.cost - a.cost);
+const sortedPrizes = prizes.sort((a, b) => {
+  if (a.stock === 0 && b.stock !== 0) return 1;
+  if (a.stock !== 0 && b.stock === 0) return -1;
+  return b.cost - a.cost;
+});
 ---
 
 <BaseLayout>
@@ -13,7 +17,7 @@ const sortedPrizes = prizes.sort((a, b) => b.cost - a.cost);
     {
       sortedPrizes.map((prize) => (
         <Card.Root>
-          <Card.Content class="flex items-center justify-between gap-4">
+          <Card.Content class:list={["flex items-center justify-between gap-4", { "bg-red-400/20": prize.stock === 0 }]}>
             <div>
               <div class="mb-4 flex flex-col space-y-1.5">
                 <Card.Title>{prize.name}</Card.Title>
