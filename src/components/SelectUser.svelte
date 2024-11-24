@@ -10,13 +10,22 @@
     displayName: string;
   }) => void;
 
+  type ReturnUser = {id: string; displayName: string};
+
   let searchQuery = "";
+  let allUsers: ReturnUser[] = [];
+  let filteredUsers: ReturnUser[] = [];
 
   const allUsersPromise = fetch("/api/users").then((res) => res.json());
 
   allUsersPromise.then((data) => {
-    console.log(data);
+    allUsers = data;
+    filteredUsers = allUsers;
   });
+
+  $: filteredUsers = allUsers.filter(user =>
+    user.displayName.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 </script>
 
 <div class="flex flex-col items-center">
@@ -28,10 +37,10 @@
     {#await allUsersPromise}
       <p>Loading...</p>
     {:then users}
-      {#if users.length === 0}
+      {#if filteredUsers.length === 0}
         <p>No users found</p>
       {:else}
-        {#each users as user}
+        {#each filteredUsers as user}
           <Button
             on:click={() =>
               onUserSelected({ id: user.id, displayName: user.displayName })}
