@@ -32,7 +32,6 @@ export const GET: APIRoute = async (context) => {
     },
   });
 };
-
 export const POST: APIRoute = async (context) => {
   const sender = await context.locals.currentUser();
 
@@ -60,6 +59,13 @@ export const POST: APIRoute = async (context) => {
   }
 
   const metadata = userMetadataSchema.parse(user.publicMetadata);
+
+  if (metadata.eventsAttended.includes(eventId)) {
+    return new Response(JSON.stringify({ error: "Event already claimed" }), {
+      status: 400,
+    });
+  }
+
   await client.users.updateUserMetadata(userId, {
     publicMetadata: {
       ...metadata,
