@@ -10,7 +10,7 @@
     displayName: string;
   }) => void;
 
-  type ReturnUser = {id: string; displayName: string};
+  type ReturnUser = { id: string; displayName: string };
 
   let searchQuery = "";
   let allUsers: ReturnUser[] = [];
@@ -23,8 +23,8 @@
     filteredUsers = allUsers;
   });
 
-  $: filteredUsers = allUsers.filter(user =>
-    user.displayName.toLowerCase().includes(searchQuery.toLowerCase())
+  $: filteredUsers = allUsers.filter((user) =>
+    user.displayName.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 </script>
 

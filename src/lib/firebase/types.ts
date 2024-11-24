@@ -38,3 +38,12 @@ export const prizeSchema = z.object({
 });
 
 export type Prize = z.infer<typeof prizeSchema>;
+
+export const huntSchema = z.object({
+  id: z.string(),
+  xp: z.number().default(0),
+  location: z.string(),
+  isActive: z.boolean().default(false),
+});
+
+export type Hunt = z.infer<typeof huntSchema>;

@@ -1,0 +1,33 @@
+---
+import BaseLayout from "$lib/layouts/BaseLayout.astro";
+import type { Hunt } from "@lib/firebase/types";
+import ClaimScavengerHunt from "./ClaimScavengerHunt.svelte";
+
+const { userId } = Astro.locals.auth();
+
+const hunt = await fetch(`/api/hunts/${Astro.params.id}`).then(
+  (res) => res.json() as Promise<Hunt | undefined>,
+);
+
+if (!hunt) {
+  Astro.response.status = 404;
+  Astro.response.statusText = "Not found";
+}
+---
+
+<BaseLayout>
+  <p>
+    Congratulations on finding this scavenger card! You get to claim <span
+      class="font-bold">{hunt?.xp} XP!</span>
+  </p>
+
+  {
+    userId ? (
+      <ClaimScavengerHunt hunt={hunt} />
+    ) : (
+      <p class="text-muted-foreground">
+        You must be logged in to claim this scavenger hunt.
+      </p>
+    )
+  }
+</BaseLayout>
