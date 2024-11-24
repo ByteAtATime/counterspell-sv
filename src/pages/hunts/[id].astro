@@ -5,7 +5,7 @@ import ClaimScavengerHunt from "./ClaimScavengerHunt.svelte";
 
 const { userId } = Astro.locals.auth();
 
-const hunt = await fetch(new URL(`/api/hunts/${Astro.params.id}`, Astro.url.hostname)).then(
+const hunt = await fetch(new URL(`/api/hunts/${Astro.params.id}`, Astro.url)).then(
   (res) => res.json() as Promise<Hunt | undefined>,
 );
 
