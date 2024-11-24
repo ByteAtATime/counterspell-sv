@@ -9,8 +9,6 @@
 
     $: isAdmin = $userStore?.publicMetadata.isAdmin;
 
-    export let mockUser: User;
-
     let open = false;
 
     let selectedUser: { id: string; displayName: string } | null = null;

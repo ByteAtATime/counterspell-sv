@@ -36,9 +36,9 @@
       });
   
       toast.promise(resPromise, {
-        loading: "Granting XP...",
-        success: "XP granted!",
-        error: "Failed to grant XP!",
+        loading: "Buying prize...",
+        success: "Prize purchased!",
+        error: "Failed to purchase prize!",
       });
     };
   </script>
@@ -60,7 +60,7 @@
             <SelectPrize onPrizeSelected={(prize) => selectedPrize = prize} />
   
             <Dialog.Footer>
-              <Button type="submit" disabled={!selectedPrize}>Grant!</Button>
+              <Button type="submit" disabled={!selectedPrize}>Buy!</Button>
             </Dialog.Footer>
           </form>
         {/if}
