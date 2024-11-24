@@ -4,7 +4,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import * as Card from "@components/ui/card";
 
 const prizes = await getAllPrizes();
-const sortedPrizes = prizes.sort((a, b) => a.cost - b.cost);
+const sortedPrizes = prizes.sort((a, b) => b.cost - a.cost);
 ---
 
 <BaseLayout>
