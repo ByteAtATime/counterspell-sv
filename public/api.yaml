@@ -1,0 +1,597 @@
+openapi: 3.1.0
+info:
+  title: Counterspell SV API
+  version: 1.0.0
+  description: API for managing users, events, prizes, and XP for the Counterspell SV application.
+servers:
+  - url: https://counterspellsv.xyz
+    description: Production server
+x-tagGroups:
+  - name: User Management
+    tags:
+      - Users
+      - User XP
+      - User Events
+  - name: Event Management
+    tags:
+      - Events
+  - name: Prize Management
+    tags:
+      - Prizes
+  - name: Scavenger Hunts
+    tags:
+      - Hunts
+
+paths:
+  /api/events:
+    get:
+      summary: Get all events
+      description: Retrieves a list of all events. Only accessible to admin users.
+      operationId: getAllEvents
+      tags:
+        - Events
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Event"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Unauthorized
+      security:
+        - bearerAuth: []
+  /api/prizes:
+    get:
+      summary: Get all prizes
+      description: Retrieves a list of all prizes.
+      operationId: getAllPrizes
+      tags:
+        - Prizes
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Prize"
+  /api/xp:
+    get:
+      summary: Get XP leaderboard
+      description: Retrieves the experience points (XP) of the top users. The number of users returned is determined by `LEADERBOARD_SIZE`.
+      operationId: getXPLeaderboard
+      tags:
+        - User XP
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserExperience"
+      security:
+        - bearerAuth: []
+
+  /api/hunts:
+    post:
+      summary: Create a new scavenger hunt
+      description: Creates a new scavenger hunt. Only accessible to admin users.
+      operationId: createHunt
+      tags:
+        - Hunts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Hunt"
+      responses:
+        "201":
+          description: Hunt created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: The ID of the newly created hunt
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error details
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Unauthorized
+      security:
+        - bearerAuth: []
+
+  /api/hunts/{id}:
+    get:
+      summary: Get a scavenger hunt by ID
+      description: Retrieves a specific scavenger hunt by its ID. If `includeLocation` is true, the location of the hunt is included in the response. Only admins can include the location.
+      operationId: getHunt
+      tags:
+        - Hunts
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: includeLocation
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Hunt"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Unauthorized
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Not Found
+      security:
+        - bearerAuth: []
+
+  /api/hunts/{id}/claim:
+    post:
+      summary: Claim a scavenger hunt
+      description: Allows a user to claim a specific scavenger hunt, granting them the associated XP.
+      operationId: claimHunt
+      tags:
+        - Hunts
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Claimed successfully
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not found
+      security:
+        - bearerAuth: []
+
+  /api/users:
+    get:
+      summary: Get all users
+      description: Retrieves a list of all users with basic information. Only accessible to admin users.
+      operationId: getAllUsers
+      tags:
+        - Users
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Unauthorized
+      security:
+        - bearerAuth: []
+
+  /api/users/names:
+    get:
+      summary: Get usernames for a list of user IDs
+      description: Retrieves the usernames for a given list of user IDs.
+      operationId: getUsernames
+      tags:
+        - Users
+      parameters:
+        - name: userIds
+          in: query
+          required: true
+          schema:
+            type: string
+            description: Comma-separated list of user IDs
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: string
+                  description: Username associated with the user ID
+
+  /api/users/{userId}:
+    get:
+      summary: Get user by ID
+      description: Retrieves information about a specific user by their ID. The amount of information returned depends on whether the requester is an admin or the user themselves.
+      operationId: getUserById
+      tags:
+        - Users
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Bad request
+        "404":
+          description: User not found
+      security:
+        - bearerAuth: []
+
+  /api/users/{userId}/admin:
+    get:
+      summary: Get admin-level user information
+      description: Retrieves admin-level information about a specific user, including their XP and display name. Only accessible to admin users.
+      operationId: getAdminUserInfo
+      tags:
+        - Users
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  xp:
+                    $ref: "#/components/schemas/UserExperience"
+                  displayName:
+                    type: string
+        "400":
+          description: Bad request
+        "401":
+          description: Unauthorized
+      security:
+        - bearerAuth: []
+
+  /api/users/{userId}/events:
+    get:
+      summary: Get user's event attendance
+      description: Retrieves a record of events attended by a specific user.
+      operationId: getUserEvents
+      tags:
+        - User Events
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: boolean
+                  description: Indicates whether the user attended the event (true) or not (false)
+        "400":
+          description: Bad request
+        "404":
+          description: User not found
+
+  /api/users/{userId}/event:
+    get:
+      summary: Check if a user has attended a specific event
+      description: Checks if a user has attended a specific event.
+      operationId: checkUserEventAttendance
+      tags:
+        - User Events
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: eventId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  hasAttended:
+                    type: boolean
+        "400":
+          description: Bad request
+        "404":
+          description: User not found
+    post:
+      summary: Mark a user as having attended an event
+      description: Marks a user as having attended a specific event, granting them the associated XP. Only accessible to admin users.
+      operationId: markUserEventAttendance
+      tags:
+        - User Events
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: eventId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+        "400":
+          description: Bad request
+        "401":
+          description: Unauthorized
+        "404":
+          description: User or event not found
+      security:
+        - bearerAuth: []
+
+  /api/users/{userId}/prize:
+    post:
+      summary: Buy a prize for a user
+      description: Allows an admin to buy a prize for a specific user, deducting the prize cost from the user's XP. Only accessible to admin users.
+      operationId: buyPrizeForUser
+      tags:
+        - Users
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: prizeId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+        "400":
+          description: Bad request
+        "401":
+          description: Unauthorized
+        "404":
+          description: User or prize not found
+        "500":
+          description: Internal server error
+      security:
+        - bearerAuth: []
+
+  /api/users/{userId}/xp:
+    post:
+      summary: Grant XP to a user
+      description: Grants a specified amount of XP to a user, along with a reason. Only accessible to admin users.
+      operationId: grantUserXP
+      tags:
+        - User XP
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  description: The amount of XP to grant
+                reason:
+                  type: string
+                  description: The reason for granting XP
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+        "400":
+          description: Bad request
+        "401":
+          description: Unauthorized
+      security:
+        - bearerAuth: []
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        primaryEmail:
+          type: string
+        displayName:
+          type: string
+        imageUrl:
+          type: string
+        xp:
+          $ref: "#/components/schemas/UserExperience"
+        prizes:
+          type: array
+          items:
+            $ref: "#/components/schemas/Prize"
+    UserExperience:
+      type: object
+      properties:
+        id:
+          type: string
+        xp:
+          type: number
+        history:
+          type: array
+          items:
+            type: object
+            properties:
+              xp:
+                type: number
+              timestamp:
+                type: string
+                format: date-time
+              reason:
+                type: string
+              author:
+                type: string
+    Event:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        xp:
+          type: number
+          description: XP granted for attending the event
+    Prize:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        cost:
+          type: number
+        stock:
+          type: number
+        imageUrl:
+          type: string
+        description:
+          type: string
+    Hunt:
+      type: object
+      properties:
+        id:
+          type: string
+        xp:
+          type: number
+          description: XP granted for claiming the hunt
+        location:
+          type: string
+          description: Location of the hunt (only available to admins)
+        isActive:
+          type: boolean
+          description: Indicates if the hunt is currently active
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+tags:
+  - name: Users
+    description: Operations related to user management
+  - name: User XP
+    description: Operations related to user experience points
+  - name: User Events
+    description: Operations related to user event attendance
+  - name: Events
+    description: Operations related to event management
+  - name: Prizes
+    description: Operations related to prize management
+  - name: Hunts
+    description: Operations related to scavenger hunts
