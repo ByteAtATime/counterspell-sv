@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Counterspell SV API
   version: 1.0.0
-  description: API for managing users, events, prizes, and XP for the Counterspell SV application.
+  description: API for managing users, events, prizes, and XP for Counterspell Silicon Valley.
 servers:
   - url: https://counterspellsv.xyz
     description: Production server
